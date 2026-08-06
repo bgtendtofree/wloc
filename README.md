@@ -107,4 +107,6 @@ node test/settings-demo.mjs  # GCJ 换算 + 透传
 
 ## 致谢
 
-原始思路与框架: Yu9191、FFF686868、NSNanoCat
+- FFF686868 / proxypin-wloc-spoofer — WLOC protobuf patch 原始思路与逻辑 (MIT)
+- Yu9191 / wloc — 移植 Surge 系与持久化坐标思路
+- NSNanoCat / util — 跨平台脚本框架
