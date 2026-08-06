@@ -10,3 +10,4 @@ jobs:
           node-version: 22
       - run: node test/node-demo.mjs
       - run: node test/settings-demo.mjs
+      - run: npx -y @biomejs/biome@1.9.4 check test/
