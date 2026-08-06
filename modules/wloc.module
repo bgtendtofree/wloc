@@ -1,8 +1,7 @@
 #!name=Apple WLOC 定位修改
 #!desc=修改 Apple 网络定位(Wi-Fi/基站)返回坐标, 实现 iOS 网络定位虚拟定位 | 苹果地图选点 + 快捷指令直接生效, 全程设备内, 无需服务器 | 用法见主页
-#!author=bgtendtofree (fork 自 Yu9191)
+#!author=bgtendtofree
 #!homepage=https://github.com/bgtendtofree/wloc
-#!icon=https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/wloc.jpg
 #!category=Tools
 
 [Script]

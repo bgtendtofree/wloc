@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="wloc.jpg" width="144" />
-</p>
-
 # Apple WLOC 定位修改 (Shadowrocket)
 
 修改 Apple 网络定位 (Wi-Fi/基站) 返回坐标, 实现 iOS 虚拟定位。**苹果地图选点 + 快捷指令, 全程设备内完成, 无需任何服务器。**
@@ -87,6 +83,4 @@ node test/settings-demo.mjs  # GCJ 换算 + 透传
 
 ## 致谢
 
-- [Yu9191/wloc](https://github.com/Yu9191/wloc) — 上游项目 (本仓为其深度精简 fork, 仅保留 Shadowrocket)
-- [proxypin-wloc-spoofer](https://github.com/FFF686868/proxypin-wloc-spoofer) — 原始思路
-- [NSNanoCat/Util](https://github.com/NSNanoCat/util) — 跨平台脚本框架
+原始思路与框架: Yu9191、FFF686868、NSNanoCat
