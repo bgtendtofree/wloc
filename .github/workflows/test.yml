@@ -5,9 +5,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: node test/node-demo.mjs
+      - run: node --version && node test/node-demo.mjs
       - run: node test/settings-demo.mjs
       - run: npx -y @biomejs/biome@1.9.4 check test/
