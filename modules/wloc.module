@@ -1,0 +1,13 @@
+#!name=Apple WLOC 定位修改
+#!desc=修改 Apple 网络定位(Wi-Fi/基站)返回坐标, 实现 iOS 网络定位虚拟定位 | 苹果地图选点 + 快捷指令直接生效, 全程设备内, 无需服务器 | 用法见主页
+#!author=bgtendtofree (fork 自 Yu9191)
+#!homepage=https://github.com/bgtendtofree/wloc
+#!icon=https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/wloc.jpg
+#!category=Tools
+
+[Script]
+Apple WLOC = type=http-response,pattern=^https?:\/\/gs-loc(-cn)?\.apple\.com\/clls\/wloc,requires-body=1,binary-body-mode=1,max-size=0,timeout=30,script-path=https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/dist/wloc.js,argument=longitude=113.94114&latitude=22.544577&accuracy=25&logLevel=info
+WLOC Settings = type=http-request,pattern=^https?:\/\/gs-loc(-cn)?\.apple\.com\/wloc-settings\/save,requires-body=0,max-size=0,timeout=10,script-path=https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/dist/wloc-settings.js
+
+[MITM]
+hostname = %APPEND% gs-loc.apple.com, gs-loc-cn.apple.com
