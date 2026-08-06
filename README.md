@@ -102,8 +102,8 @@ node test/settings-demo.mjs  # GCJ 换算 + 透传
 
 ## 代码形态
 
-`dist/` 两个脚本就是**可读源码**, 源码即发布物, 无构建步骤 — 直接改直接 push, 小火箭重载即生效。
-唯一非人话部分: `dist/wloc.js` 中部 vendor 的 pako inflate (~21KB, MIT, 见 NOTICE), 勿手改。
+`src/` 两个脚本就是**可读源码**, 源码即发布物, 无构建步骤 — 直接改直接 push, 小火箭重载即生效。
+唯一非人话部分: `src/wloc.js` 中部 vendor 的 pako inflate (~21KB, MIT, 见 NOTICE), 勿手改。
 
 ## 致谢
 

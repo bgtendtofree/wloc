@@ -1,4 +1,4 @@
-// Fixture: simulate one Shadowrocket http-response invocation of dist/wloc.js under Node.
+// Fixture: simulate one Shadowrocket http-response invocation of src/wloc.js under Node.
 // Modes (argv[2]): wifi (default) | cell | gzip | empty | passthrough
 // Frame: 8-byte header + 2-byte len + protobuf payload.
 import fs from "node:fs";
@@ -94,4 +94,4 @@ globalThis.$response = {
 	bodyBytes: new Uint8Array(body).buffer,
 };
 
-await import("../dist/wloc.js");
+await import("../src/wloc.js");

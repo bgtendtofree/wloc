@@ -1,4 +1,4 @@
-// Self-check: run dist/wloc.js against fake WLOC responses, assert patch + diagnostics.
+// Self-check: run src/wloc.js against fake WLOC responses, assert patch + diagnostics.
 // Usage: node test/node-demo.mjs
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";

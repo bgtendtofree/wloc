@@ -1,4 +1,4 @@
-/* wloc-settings.js — Apple WLOC 定位修改 (Shadowrocket)
+/* src/wloc-settings.js — Apple WLOC 定位修改 (Shadowrocket)
  * 拦截 gs-loc(-cn).apple.com/wloc-settings/save 请求, 读写 $persistentStore 中的目标坐标。
  * 全程设备内完成; cs=gcj 时输入按 GCJ-02 处理, 设备端转 WGS84 再储存。
  * 源码即发布物, 无构建步骤。

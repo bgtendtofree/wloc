@@ -6,4 +6,4 @@ try {
 } catch {}
 fs.writeFileSync("box.dat", JSON.stringify(box));
 globalThis.$request = { url: process.argv[2] };
-await import("../dist/wloc-settings.js");
+await import("../src/wloc-settings.js");

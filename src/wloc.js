@@ -1,4 +1,4 @@
-/* wloc.js — Apple WLOC 定位修改 (Shadowrocket)
+/* src/wloc.js — Apple WLOC 定位修改 (Shadowrocket)
  * 拦截 gs-loc(-cn).apple.com/clls/wloc 响应, 替换其中 protobuf 的经纬度/精度。
  * 源码即发布物, 无构建步骤。中部为 vendor 的 pako inflate (MIT, nodeca), 用于 gzip 响应解压。
  */
