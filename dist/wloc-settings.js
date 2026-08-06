@@ -1,3 +1,224 @@
-/* wloc-settings.js - Apple WLOC 定位修改 (Shadowrocket) */
-const e=(()=>{const e=e=>e in globalThis;switch(!0){case e("$task"):return"Quantumult X";case e("$loon"):return"Loon";case e("$rocket"):return"Shadowrocket";case e("Egern"):return"Egern";case Boolean(globalThis.$environment?.["surge-version"]):return"Surge";case Boolean(globalThis.$environment?.["stash-version"]):return"Stash";case e("Cloudflare"):return"Worker";case Boolean(globalThis.process?.versions?.node):return"Node.js";default:return}})();class t{static#e=new Map([]);static#t=[];static#a=new Map([]);static clear=()=>{};static count=(e="default")=>{switch(t.#e.has(e)){case!0:t.#e.set(e,t.#e.get(e)+1);break;case!1:t.#e.set(e,0)}t.log(`${e}: ${t.#e.get(e)}`)};static countReset=(e="default")=>{switch(t.#e.has(e)){case!0:t.#e.set(e,0),t.log(`${e}: ${t.#e.get(e)}`);break;case!1:t.warn(`Counter "${e}" doesn’t exist`)}};static debug=(...e)=>{t.#s<4||(e=e.map(e=>` ${e}`),t.log(...e))};static error(...a){if(!(t.#s<1)){switch(e){case"Surge":case"Loon":case"Stash":case"Egern":case"Shadowrocket":case"Quantumult X":default:a=a.map(e=>` ${e}`);break;case"Worker":case"Node.js":a=a.map(e=>` ${e?.stack??e}`)}t.log(...a)}}static exception=(...e)=>t.error(...e);static group=e=>t.#t.unshift(e);static groupEnd=()=>t.#t.shift();static info(...e){t.#s<3||(e=e.map(e=>` ${e}`),t.log(...e))}static#s=3;static get logLevel(){switch(t.#s){case 0:return"OFF";case 1:return"ERROR";case 2:return"WARN";case 3:default:return"INFO";case 4:return"DEBUG";case 5:return"ALL"}}static set logLevel(e){switch(typeof e){case"string":e=e.toLowerCase();break;case"number":break;default:e="warn"}switch(e){case 0:case"off":t.#s=0;break;case 1:case"error":t.#s=1;break;case 2:case"warn":case"warning":default:t.#s=2;break;case 3:case"info":t.#s=3;break;case 4:case"debug":t.#s=4;break;case 5:case"all":t.#s=5}}static log=(...e)=>{0!==t.#s&&(e=e.flatMap(e=>{switch(typeof e){case"object":return[JSON.stringify(e)];case"bigint":case"number":case"boolean":return[e.toString()];case"string":return e.split(/\r?\n/u);default:return[e]}}),t.#t.forEach(t=>{(e=e.map(e=>`  ${e}`)).unshift(` ${t}:`)}),e=["",...e],console.log(e.join("\n")))};static time=(e="default")=>t.#a.set(e,Date.now());static timeEnd=(e="default")=>t.#a.delete(e);static timeLog=(e="default")=>{const a=t.#a.get(e);a?t.log(`${e}: ${Date.now()-a}ms`):t.warn(`Timer "${e}" doesn’t exist`)};static warn(...e){t.#s<2||(e=e.map(e=>` ${e}`),t.log(...e))}}class a{static escape(e){const t={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"};return e.replace(/[&<>"']/g,e=>t[e])}static get(e={},t="",s=void 0){Array.isArray(t)||(t=a.toPath(t));const r=t.reduce((e,t)=>Object(e)[t],e);return void 0===r?s:r}static merge(e,...t){if(null==e)return e;for(const s of t)if(null!=s)for(const t of Object.keys(s)){const r=s[t],o=e[t];switch(!0){case a.#r(r)&&a.#r(o):e[t]=a.merge(o,r);break;case r instanceof Map&&o instanceof Map:if(r.size>0)for(const[e,t]of r)o.set(e,t);break;case r instanceof Set&&o instanceof Set:if(r.size>0)for(const e of r)o.add(e);break;case Array.isArray(r)&&0===r.length&&void 0!==o:case r instanceof Map&&0===r.size&&void 0!==o:case r instanceof Set&&0===r.size&&void 0!==o:break;case void 0!==r:e[t]=r}}return e}static#r(e){if(null===e||"object"!=typeof e)return!1;const t=Object.getPrototypeOf(e);return null===t||t===Object.prototype}static omit(e={},t=[]){return Array.isArray(t)||(t=[t.toString()]),t.forEach(t=>a.unset(e,t)),e}static pick(e={},t=[]){Array.isArray(t)||(t=[t.toString()]);const a=Object.entries(e).filter(([e,a])=>t.includes(e));return Object.fromEntries(a)}static set(e,t,s){return Array.isArray(t)||(t=a.toPath(t)),t.slice(0,-1).reduce((e,a,s)=>Object(e[a])===e[a]?e[a]:e[a]=/^\d+$/.test(t[s+1])?[]:{},e)[t[t.length-1]]=s,e}static toPath(e){return e.replace(/\[(\d+)\]/g,".$1").split(".").filter(Boolean)}static unescape(e){const t={"&amp;":"&","&lt;":"<","&gt;":">","&quot;":'"',"&#39;":"'"};return e.replace(/&amp;|&lt;|&gt;|&quot;|&#39;/g,e=>t[e])}static unset(e={},t=""){Array.isArray(t)||(t=a.toPath(t));return t.reduce((e,a,s)=>s===t.length-1?(delete e[a],!0):Object(e)[a],e)}}class s{static parse(e){let t={};switch(typeof e){case"string":{const r=e.replace(/^\?/,"");if(!r)break;const o=Object.fromEntries(r.split("&").filter(Boolean).map(e=>{const[t="",a=""]=e.split("=",2);return[s.#o(t).replace(/\[([^\[\]]+)\]/g,".$1"),s.#o(a).replace(/\"/g,"")]}));Object.keys(o).forEach(e=>a.set(t,e,o[e]));break}case"object":switch(e){case null:break;default:{const s={};Object.keys(e).forEach(t=>a.set(s,t,e[t])),t=s;break}}break;case"undefined":t={}}return t}static stringify(e={}){if(!e||"object"!=typeof e)return"";const t=[];return Object.keys(e).forEach(a=>s.#c(e,a,t)),0===t.length?"":t.map(([e,t])=>`${s.#n(s.#i(e))}=${s.#n(t)}`).join("&")}static#c(e,t,r){const o=a.get(e,t);void 0!==o&&(null!==o?Array.isArray(o)?o.forEach((a,o)=>{void 0!==a&&s.#c(e,`${t}[${o}]`,r)}):s.#r(o)?Object.keys(o).forEach(a=>s.#c(e,`${t}.${a}`,r)):r.push([t,String(o)]):r.push([t,""]))}static#i(e){const[t,...s]=a.toPath(e);return s.reduce((e,t)=>/^\d+$/.test(t)?`${e}[${t}]`:`${e}.${t}`,t)}static#r(e){if(null===e||"object"!=typeof e||Array.isArray(e))return!1;const t=Object.getPrototypeOf(e);return null===t||t===Object.prototype}static#n(e){return encodeURIComponent(e)}static#o(e){return decodeURIComponent(e.replace(/\+/g," "))}}t.debug(" $argument"),globalThis.$argument=s.parse(globalThis.$argument),globalThis.$argument.LogLevel&&(t.logLevel=globalThis.$argument.LogLevel),t.debug(" $argument",`$argument: ${JSON.stringify(globalThis.$argument)}`);function o(s={}){switch(e){case"Node.js":t.log(" 执行结束!"),process.exit(1);break;default:t.log(" 执行结束!"),"function"==typeof $done&&$done(s)}}class c{static data=null;static dataFile="box.dat";static#l=/^@(?<key>[^.]+)(?:\.(?<path>.*))?$/;static getItem(t,s=null){let r=s;switch(t.startsWith("@")){case!0:{const{key:e,path:s}=t.match(c.#l)?.groups;t=e;let o=c.getItem(t,{});"object"!=typeof o&&(o={}),r=a.get(o,s);try{r=JSON.parse(r)}catch{}break}default:switch(e){case"Surge":case"Loon":case"Stash":case"Egern":case"Shadowrocket":r=$persistentStore.read(t);break;case"Node.js":c.data=c.#u(c.dataFile),r=c.data?.[t];break;default:r=c.data?.[t]||null}try{r=JSON.parse(r)}catch{}}return r??s}static setItem(t=new String,s=new String){let r=!1;if("object"==typeof s)s=JSON.stringify(s);else s=String(s);switch(t.startsWith("@")){case!0:{const{key:e,path:o}=t.match(c.#l)?.groups;t=e;let n=c.getItem(t,{});"object"!=typeof n&&(n={}),a.set(n,o,s),r=c.setItem(t,n);break}default:switch(e){case"Surge":case"Loon":case"Stash":case"Egern":case"Shadowrocket":r=$persistentStore.write(s,t);break;case"Node.js":c.data=c.#u(c.dataFile),c.data[t]=s,c.#d(c.dataFile),r=!0;break;default:r=c.data?.[t]||null}}return r}static removeItem(t){let s=!1;switch(t.startsWith("@")){case!0:{const{key:e,path:r}=t.match(c.#l)?.groups;t=e;let o=c.getItem(t);"object"!=typeof o&&(o={}),a.unset(o,r),s=c.setItem(t,o);break}default:switch(e){case"Surge":s=$persistentStore.write(null,t);break;case"Loon":case"Stash":case"Egern":case"Shadowrocket":default:s=!1;break;case"Node.js":c.data=c.#u(c.dataFile),delete c.data[t],c.#d(c.dataFile),s=!0}}return s}static clear(){let t=!1;switch(e){case"Surge":case"Loon":case"Stash":case"Egern":case"Shadowrocket":default:t=!1;break;case"Node.js":c.data=c.#u(c.dataFile),c.data={},c.#d(c.dataFile),t=!0}return t}static#u=t=>{if("Node.js"!==e)return{};{this.fs=this.fs?this.fs:require("fs"),this.path=this.path?this.path:require("path");const e=this.path.resolve(t),a=this.path.resolve(process.cwd(),t),s=this.fs.existsSync(e),r=!s&&this.fs.existsSync(a);if(!s&&!r)return{};{const t=s?e:a;try{return JSON.parse(this.fs.readFileSync(t))}catch(e){return{}}}}};static#d=(t=this.dataFile)=>{if("Node.js"===e){this.fs=this.fs?this.fs:require("fs"),this.path=this.path?this.path:require("path");const e=this.path.resolve(t),a=this.path.resolve(process.cwd(),t),s=this.fs.existsSync(e),r=!s&&this.fs.existsSync(a),o=JSON.stringify(this.data);s?this.fs.writeFileSync(e,o):r?this.fs.writeFileSync(a,o):this.fs.writeFileSync(e,o)}}}function DLat(x,y){let r=-100+2*x+3*y+.2*y*y+.1*x*y+.2*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*Math.PI)+20*Math.sin(2*x*Math.PI))*2/3;r+=(20*Math.sin(y*Math.PI)+40*Math.sin(y/3*Math.PI))*2/3;r+=(160*Math.sin(y/12*Math.PI)+320*Math.sin(y*Math.PI/30))*2/3;return r}function DLon(x,y){let r=300+x+2*y+.1*x*x+.1*x*y+.1*Math.sqrt(Math.abs(x));r+=(20*Math.sin(6*x*Math.PI)+20*Math.sin(2*x*Math.PI))*2/3;r+=(20*Math.sin(x*Math.PI)+40*Math.sin(x/3*Math.PI))*2/3;r+=(150*Math.sin(x/12*Math.PI)+300*Math.sin(x/30*Math.PI))*2/3;return r}function Fwd(lat,lon){if(lon<72.004||lon>137.8347||lat<.8293||lat>55.8271)return{lat,lon};let dLat=DLat(lon-105,lat-35),dLon=DLon(lon-105,lat-35);const rad=lat/180*Math.PI;let m=Math.sin(rad);m=1-.00669342162296594323*m*m;const sm=Math.sqrt(m);dLat=dLat*180/(6378245*(1-.00669342162296594323)/(m*sm)*Math.PI);dLon=dLon*180/(6378245/sm*Math.cos(rad)*Math.PI);return{lat:lat+dLat,lon:lon+dLon}}function G2W(lat,lon){if(lon<72.004||lon>137.8347||lat<.8293||lat>55.8271)return{lat,lon};let wLa=lat,wLo=lon;for(let i=0;i<6;i++){const g=Fwd(wLa,wLo),eLa=g.lat-lat,eLo=g.lon-lon;if(Math.abs(eLa)<1e-9&&Math.abs(eLo)<1e-9)break;wLa-=eLa;wLo-=eLo}return{lat:wLa,lon:wLo}}
-const n="wloc_settings",i=$request.url||"";const l=function(e){const t=e.split("?")[1]||"",a=new Map;for(const e of t.split("&")){if(!e)continue;const t=e.indexOf("="),s=-1===t?e:e.slice(0,t),r=-1===t?"":e.slice(t+1);let o,c;try{o=decodeURIComponent(s.replace(/\+/g," "))}catch{o=s}try{c=decodeURIComponent(r.replace(/\+/g," "))}catch{c=r}a.has(o)||a.set(o,c)}return a}(i),u=l.get("action")||"save";let d;if(t.debug(`[wloc-settings] url=${i}, action=${u}`),"query"===u)try{const e=c.getItem(n);e&&"object"==typeof e&&e.longitude&&e.latitude?(d={success:!0,longitude:e.longitude,latitude:e.latitude,accuracy:e.accuracy||25,updatedAt:e.updatedAt||null},t.debug(`[wloc-settings] 查询: ${e.longitude}, ${e.latitude}`)):d={success:!1,error:"无已保存的坐标"}}catch(e){d={success:!1,error:e.message||"读取失败"}}else if("clear"===u)try{c.setItem(n,null),d={success:!0},t.info("[wloc-settings] 已清除坐标数据")}catch(e){d={success:!1,error:e.message||"清除失败"},t.error(`[wloc-settings] 清除失败: ${e.message}`)}else{let e=parseFloat(l.get("lon")||l.get("longitude")||"0"),a=parseFloat(l.get("lat")||l.get("latitude")||"0");const s=parseInt(l.get("acc")||l.get("accuracy")||"25",10);if("gcj"===(l.get("cs")||"").toLowerCase()){const _w=G2W(a,e);e=_w.lon,a=_w.lat}if(e&&a){const r={longitude:e,latitude:a,accuracy:s,updatedAt:new Date(Date.now()+288e5).toISOString().replace("Z","+08:00")};try{c.setItem(n,r)?(d={success:!0,longitude:e,latitude:a,accuracy:s},t.info(`[wloc-settings] 已保存: ${e}, ${a}`)):(d={success:!1,error:"Storage.setItem 返回 false"},t.error("[wloc-settings] setItem 返回 false"))}catch(e){d={success:!1,error:e.message||"写入失败"},t.error(`[wloc-settings] ${e.message}`)}}else d={success:!1,error:"缺少 lon/lat 参数"}}const g={status:200,headers:{"Content-Type":"application/json","Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, OPTIONS"},body:JSON.stringify(d)};o({response:g});
+/* wloc-settings.js — Apple WLOC 定位修改 (Shadowrocket)
+ * 拦截 gs-loc(-cn).apple.com/wloc-settings/save 请求, 读写 $persistentStore 中的目标坐标。
+ * 全程设备内完成; cs=gcj 时输入按 GCJ-02 处理, 设备端转 WGS84 再储存。
+ * 源码即发布物, 无构建步骤。
+ */
+
+// ==================== 运行环境 ====================
+const ENV = typeof process !== "undefined" && process?.versions?.node ? "Node" : "Proxy";
+
+// ==================== 日志 ====================
+const Log = {
+  level: 3,
+  set logLevel(v) {
+    const map = { off: 0, error: 1, warn: 2, warning: 2, info: 3, debug: 4, all: 5 };
+    this.level = typeof v === "number" ? v : (map[String(v).toLowerCase()] ?? 2);
+  },
+  print(...args) {
+    if (this.level === 0) return;
+    const lines = args.flatMap((a) => {
+      if (typeof a === "object") return [JSON.stringify(a)];
+      return String(a).split(/\r?\n/);
+    });
+    console.log(["", ...lines].join("\n"));
+  },
+  info(...a) { if (this.level >= 3) this.print(...a.map((x) => ` ${x}`)); },
+  warn(...a) { if (this.level >= 2) this.print(...a.map((x) => ` ${x}`)); },
+  error(...a) { if (this.level >= 1) this.print(...a.map((x) => ` ${x?.stack ?? x}`)); },
+  debug(...a) { if (this.level >= 4) this.print(...a.map((x) => ` ${x}`)); },
+};
+
+// ==================== 持久化存储 ====================
+const Store = {
+  get(key, fallback = null) {
+    let v = ENV === "Node" ? readBox()[key] : $persistentStore.read(key);
+    try { v = JSON.parse(v); } catch {}
+    return v ?? fallback;
+  },
+  set(key, value) {
+    const s = typeof value === "object" ? JSON.stringify(value) : String(value);
+    if (ENV === "Node") {
+      const box = readBox();
+      box[key] = s;
+      writeBox(box);
+      return true;
+    }
+    return $persistentStore.write(s, key);
+  },
+};
+
+function readBox() {
+  try {
+    return JSON.parse(require("fs").readFileSync("box.dat", "utf8"));
+  } catch {
+    return {};
+  }
+}
+function writeBox(box) {
+  require("fs").writeFileSync("box.dat", JSON.stringify(box));
+}
+
+// ==================== 结束 ====================
+function done(result = {}) {
+  Log.info(" 执行结束!");
+  if (ENV === "Node") process.exit(1);
+  if (typeof $done === "function") $done(result);
+}
+
+// ==================== GCJ-02 → WGS84 (设备端换算) ====================
+// 中国大陆苹果地图/高德坐标为 GCJ-02 偏移坐标; 迭代反算收敛到亚米级。
+const GCJ_A = 6378245.0;
+const GCJ_EE = 0.00669342162296594323;
+
+const gcjOutOfChina = (lon, lat) => lon < 72.004 || lon > 137.8347 || lat < 0.8293 || lat > 55.8271;
+
+function gcjDeltaLat(x, y) {
+  let r = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+  r += ((20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0) / 3.0;
+  r += ((20.0 * Math.sin(y * Math.PI) + 40.0 * Math.sin((y / 3.0) * Math.PI)) * 2.0) / 3.0;
+  r += ((160.0 * Math.sin((y / 12.0) * Math.PI) + 320 * Math.sin((y * Math.PI) / 30.0)) * 2.0) / 3.0;
+  return r;
+}
+
+function gcjDeltaLon(x, y) {
+  let r = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+  r += ((20.0 * Math.sin(6.0 * x * Math.PI) + 20.0 * Math.sin(2.0 * x * Math.PI)) * 2.0) / 3.0;
+  r += ((20.0 * Math.sin(x * Math.PI) + 40.0 * Math.sin((x / 3.0) * Math.PI)) * 2.0) / 3.0;
+  r += ((150.0 * Math.sin((x / 12.0) * Math.PI) + 300.0 * Math.sin((x / 30.0) * Math.PI)) * 2.0) / 3.0;
+  return r;
+}
+
+// WGS84 -> GCJ-02 (正向偏移)
+function wgs84ToGcj02(lat, lon) {
+  if (gcjOutOfChina(lon, lat)) return { lat, lon };
+  let dLat = gcjDeltaLat(lon - 105.0, lat - 35.0);
+  let dLon = gcjDeltaLon(lon - 105.0, lat - 35.0);
+  const radLat = (lat / 180.0) * Math.PI;
+  let magic = Math.sin(radLat);
+  magic = 1 - GCJ_EE * magic * magic;
+  const sqrtMagic = Math.sqrt(magic);
+  dLat = (dLat * 180.0) / (((GCJ_A * (1 - GCJ_EE)) / (magic * sqrtMagic)) * Math.PI);
+  dLon = (dLon * 180.0) / ((GCJ_A / sqrtMagic) * Math.cos(radLat) * Math.PI);
+  return { lat: lat + dLat, lon: lon + dLon };
+}
+
+// GCJ-02 -> WGS84 (不动点迭代反算, <0.1m)
+function gcj02ToWgs84(lat, lon) {
+  if (gcjOutOfChina(lon, lat)) return { lat, lon };
+  let wgsLat = lat;
+  let wgsLon = lon;
+  for (let i = 0; i < 6; i++) {
+    const g = wgs84ToGcj02(wgsLat, wgsLon);
+    const errLat = g.lat - lat;
+    const errLon = g.lon - lon;
+    if (Math.abs(errLat) < 1e-9 && Math.abs(errLon) < 1e-9) break;
+    wgsLat -= errLat;
+    wgsLon -= errLon;
+  }
+  return { lat: wgsLat, lon: wgsLon };
+}
+
+// ==================== 请求处理 ====================
+const KEY = "wloc_settings";
+
+function parseQuery(url) {
+  const out = new Map();
+  const qs = url.split("?")[1] || "";
+  for (const pair of qs.split("&")) {
+    if (!pair) continue;
+    const i = pair.indexOf("=");
+    const k = i === -1 ? pair : pair.slice(0, i);
+    const v = i === -1 ? "" : pair.slice(i + 1);
+    const dk = safeDecode(k);
+    if (!out.has(dk)) out.set(dk, safeDecode(v));
+  }
+  return out;
+}
+function safeDecode(s) {
+  try {
+    return decodeURIComponent(String(s).replace(/\+/g, " "));
+  } catch {
+    return String(s);
+  }
+}
+
+const url = $request.url || "";
+const query = parseQuery(url);
+const action = query.get("action") || "save";
+Log.debug(`[wloc-settings] url=${url}, action=${action}`);
+
+let result;
+if (action === "query") {
+  // 查询已存坐标
+  try {
+    const saved = Store.get(KEY);
+    if (saved && typeof saved === "object" && saved.longitude && saved.latitude) {
+      result = {
+        success: true,
+        longitude: saved.longitude,
+        latitude: saved.latitude,
+        accuracy: saved.accuracy || 25,
+        updatedAt: saved.updatedAt || null,
+      };
+      Log.debug(`[wloc-settings] 查询: ${saved.longitude}, ${saved.latitude}`);
+    } else {
+      result = { success: false, error: "无已保存的坐标" };
+    }
+  } catch (e) {
+    result = { success: false, error: e.message || "读取失败" };
+  }
+} else if (action === "clear") {
+  // 清除坐标 → wloc.js 进入透传模式 → 恢复真实定位
+  try {
+    Store.set(KEY, null);
+    result = { success: true };
+    Log.info("[wloc-settings] 已清除坐标数据");
+  } catch (e) {
+    result = { success: false, error: e.message || "清除失败" };
+    Log.error(`[wloc-settings] 清除失败: ${e.message}`);
+  }
+} else {
+  // 保存坐标 (cs=gcj 时先设备端转 WGS84)
+  let lon = parseFloat(query.get("lon") || query.get("longitude") || "0");
+  let lat = parseFloat(query.get("lat") || query.get("latitude") || "0");
+  const acc = parseInt(query.get("acc") || query.get("accuracy") || "25", 10);
+  if ((query.get("cs") || "").toLowerCase() === "gcj") {
+    const w = gcj02ToWgs84(lat, lon);
+    lon = w.lon;
+    lat = w.lat;
+  }
+  if (lon && lat) {
+    const record = {
+      longitude: lon,
+      latitude: lat,
+      accuracy: acc,
+      updatedAt: new Date(Date.now() + 288e5).toISOString().replace("Z", "+08:00"), // 北京时间
+    };
+    try {
+      if (Store.set(KEY, record)) {
+        result = { success: true, longitude: lon, latitude: lat, accuracy: acc };
+        Log.info(`[wloc-settings] 已保存: ${lon}, ${lat}`);
+      } else {
+        result = { success: false, error: "Store.set 返回 false" };
+        Log.error("[wloc-settings] set 返回 false");
+      }
+    } catch (e) {
+      result = { success: false, error: e.message || "写入失败" };
+      Log.error(`[wloc-settings] ${e.message}`);
+    }
+  } else {
+    result = { success: false, error: "缺少 lon/lat 参数" };
+  }
+}
+
+done({
+  response: {
+    status: 200,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, OPTIONS",
+    },
+    body: JSON.stringify(result),
+  },
+});
