@@ -29,7 +29,6 @@ const Log = {
     }
     console.log(["", ...lines].join("\n"));
   },
-  log(...a) { this.print(...a); },
   info(...a) { if (this.level >= 3) this.print(...a.map((x) => ` ${x}`)); },
   warn(...a) { if (this.level >= 2) this.print(...a.map((x) => ` ${x}`)); },
   error(...a) { if (this.level >= 1) this.print(...a.map((x) => ` ${x}`)); },
@@ -85,7 +84,7 @@ function parseArgs(input) {
 
 // ==================== 结束 ====================
 function done(result = {}) {
-  Log.log(" 执行结束!");
+  Log.print(" 执行结束!");
   if (ENV === "Node") process.exit(1);
   if (typeof $done === "function") $done(result);
 }
@@ -285,12 +284,9 @@ function patchOuterMessage(data, target, stats) {
 // 响应体: N 字节头 + 2 字节大端长度 + protobuf payload (+ 可能的尾部)
 // 头部结构随版本变化, 故按候选偏移逐个尝试, 失败回滚统计再试下一个。
 
+// wifi/cell 递增必由 location patch 触发, 比较 locations 增量即等价于全量 stats 增量
 const snapshotStats = (s) => ({ wifi: s.wifi | 0, cell: s.cell | 0, locations: s.locations | 0, skipped: s.skipped | 0, accOrig: s.accOrig });
 const restoreStats = (s, snap) => Object.assign(s, snap);
-
-function statsDelta(a, b) {
-  return a.locations - b.locations + (a.wifi - b.wifi) + (a.cell - b.cell);
-}
 
 function bytesEqual(a, b) {
   if (a.length !== b.length) return false;
@@ -309,7 +305,7 @@ function patchFrameAt(body, base, target, stats) {
   const before = snapshotStats(stats);
   const patched = patchOuterMessage(payload, target, stats);
   if (patched.length > 65535) throw new Error("patched payload too large: " + patched.length);
-  if (statsDelta(stats, before) <= 0 || bytesEqual(payload, patched)) {
+  if (stats.locations === before.locations || bytesEqual(payload, patched)) {
     restoreStats(stats, before);
     throw new Error("frame parsed but no patchable wloc payload at " + base);
   }
@@ -346,7 +342,7 @@ function patchBody(body, target) {
     try {
       const payload = body.slice(i);
       const patched = patchOuterMessage(payload, target, stats);
-      if (statsDelta(stats, snap) > 0 && !bytesEqual(payload, patched)) {
+      if (stats.locations !== snap.locations && !bytesEqual(payload, patched)) {
         Log.info(`[wloc] patched via raw fallback locations=${stats.locations} wifi=${stats.wifi} cell=${stats.cell} skipped=${stats.skipped}`);
         return { data: concat([body.slice(0, i), patched]), stats };
       }

@@ -23,7 +23,6 @@ const Log = {
     console.log(["", ...lines].join("\n"));
   },
   info(...a) { if (this.level >= 3) this.print(...a.map((x) => ` ${x}`)); },
-  warn(...a) { if (this.level >= 2) this.print(...a.map((x) => ` ${x}`)); },
   error(...a) { if (this.level >= 1) this.print(...a.map((x) => ` ${x?.stack ?? x}`)); },
   debug(...a) { if (this.level >= 4) this.print(...a.map((x) => ` ${x}`)); },
 };
