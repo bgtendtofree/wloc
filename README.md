@@ -12,20 +12,41 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 
 启用模块, 开启 MITM 并信任证书 (`gs-loc.apple.com`)。
 
-## 使用
+## 快捷指令: 设位置
 
-**设置定位:** 苹果地图选点 → 共享 → 快捷指令 → 生效。快捷指令自制 (30 秒):
+新建快捷指令, ⓘ 设置里开「在共享表单中显示」, 类型勾「URL」和「文本」。动作按顺序:
 
-1. 「接收共享表单输入」(类型: URL)
-2. 「匹配文本」用正则 `coordinate=(-?\d+\.\d+),(-?\d+\.\d+)` 取共享的 URL → 第 1 组=纬度, 第 2 组=经度
-3. 「获取 URL 内容」请求:
-   `https://gs-loc.apple.com/wloc-settings/save?lon=<经度>&lat=<纬度>&cs=gcj`
-   (中国大陆苹果地图坐标是 GCJ-02, `cs=gcj` 由脚本在设备端转 WGS84, 链接不出设备)
-4. 返回含 `"success":true` 即完成
+| # | 动作 | 配置 |
+|---|------|------|
+| 1 | 文本 | 内容选变量「快捷指令输入」 |
+| 2 | 匹配文本 | 正则 `coordinate=(-?\d+\.\d+),(-?\d+\.\d+)`, 在动作 1 的文本中匹配 |
+| 3 | 从匹配文本中获取组 | 索引 `1`, 输入为动作 2 的「匹配」输出 |
+| 4 | 设定变量 | 名 `Latitude`, 值为动作 3 输出 |
+| 5 | 从匹配文本中获取组 | 索引 `2`, 输入为动作 2 的「匹配」输出 |
+| 6 | 设定变量 | 名 `Longitude`, 值为动作 5 输出 |
+| 7 | 获取 URL 内容 | `https://gs-loc.apple.com/wloc-settings/save?lon=[Longitude]&lat=[Latitude]&acc=25&cs=gcj`, GET |
+| 8 | 显示通知 | `已切换定位 [Latitude],[Longitude]` |
+| 9 | (可选) 打开 URL | `prefs:root=Privacy&path=LOCATION` — 跳到定位设置, 手动关开刷新 |
 
-Mac 苹果地图选点也行: 复制链接 → AirDrop 到 iPhone → 跑同一快捷指令。
+注意:
 
-**恢复真实定位:** 请求 `https://gs-loc.apple.com/wloc-settings/save?action=clear` (可做成另一个快捷指令), 或停用模块。iOS 26+ 切换后需重启设备清 locationd 缓存。
+- 正则第 1 组是**纬度**, 第 2 组是**经度** (苹果 `coordinate=纬度,经度`), URL 里 `lon=` 接第 2 组
+- `cs=gcj` 必须带: 中国大陆苹果地图坐标是 GCJ-02, 脚本在设备端转 WGS84, 链接不出设备
+- Mac 苹果地图选点: 复制链接 → AirDrop 到 iPhone → 跑同一快捷指令
+
+用法: 苹果地图长按选点 → 分享 → 本快捷指令 → 通知弹出即生效。
+
+## 快捷指令: 恢复定位
+
+新建快捷指令, 一个动作:
+
+```
+获取 URL 内容: https://gs-loc.apple.com/wloc-settings/save?action=clear
+```
+
+清除已存坐标 → 脚本自动进入透传模式 → 真实定位恢复。也可直接停用模块。
+
+**切换后刷新 (实测有效):** 关开一次定位服务即可; 无效则杀掉 App 重开; 仍无效再重启设备。
 
 ## 工作原理
 
@@ -39,14 +60,12 @@ Mac 苹果地图选点也行: 复制链接 → AirDrop 到 iPhone → 跑同一�
 - `wloc.js` — 拦截 `/clls/wloc` 响应, 解析 protobuf 替换经纬度/精度
 - `wloc-settings.js` — 拦截 `/wloc-settings/save`, 写持久化存储 (含设备端 GCJ-02→WGS84)
 
-## 边界 (重要)
+## 边界 (实测)
 
 **WLOC 只改网络定位输入, 控制不了 Core Location 最终输出:**
 
-- 室内深处 (GPS 弱): 稳定 ✓
-- 窗边/室外/移动中: 真 GPS 信号优先, 会被盖回真实位置 ✗ — 软件无解
-- 需要室外稳定: 只有物理尾插 (伪造外置 GPS 配件, NMEA 注入), 不在本项目范围
-- accuracy 建议 25~50 米, 勿设 1m (网络定位装 1m 反而不真)
+- 室内 (GPS 弱): 假位置稳定, 实测不飘 ✓
+- 窗边 (有 GPS 信号): 假位置短暂出现后约 1 秒被真实位置盖掉 ✗ — GPS 优先于网络定位, 软件层无解
 
 ## 诊断日志
 
@@ -59,8 +78,8 @@ Mac 苹果地图选点也行: 复制链接 → AirDrop 到 iPhone → 跑同一�
 
 | 现象 | 日志表现 | 结论 |
 |------|----------|------|
-| 位置回跳 | 回跳时点有新 `#N PATCH ok` | WLOC 层正常, 是 GPS/CL 融合覆盖, 软件无解 |
-| 位置回跳 | 回跳时点没有新 `#N` | 走了其它通道 (QUIC/GPS/缓存), 非 WLOC 问题 |
+| 位置回跳 | 回跳时点有新 `#N PATCH ok` | WLOC 层正常, 是 GPS/CL 融合覆盖 |
+| 位置回跳 | 回跳时点没有新 `#N` | 走了其它通道 (GPS/缓存), 非 WLOC 问题 |
 | 任何时刻 | `#N PATCH fail` | 响应格式变化, 提 issue 附该行 |
 
 ## 接口参数 (`/wloc-settings/save`)
@@ -77,7 +96,7 @@ Mac 苹果地图选点也行: 复制链接 → AirDrop 到 iPhone → 跑同一�
 ## 本地自检
 
 ```
-node test/node-demo.mjs      # wloc.js patch + 诊断日志
+node test/node-demo.mjs      # wloc.js patch + 诊断日志 (wifi/cell/gzip/透传)
 node test/settings-demo.mjs  # GCJ 换算 + 透传
 ```
 
