@@ -101,7 +101,7 @@ globalThis.$response = {
 	url: "https://gs-loc.apple.com/clls/wloc",
 	status: 200,
 	headers: { "Content-Type": "application/x-protobuf" },
-	bodyBytes: new Uint8Array(body).buffer,
+	body: new Uint8Array(body),
 };
 
 // west 模式: 捕获 patched 响应体并打印 hex (模块 done() 在 Node 下会先 process.exit, 需绕过)

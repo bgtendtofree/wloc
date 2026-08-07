@@ -330,11 +330,7 @@ function handleResponse(request, response, settings) {
   Log.group(`[wloc] #${seq} Response ${url}`);
   Log.info(`[wloc] #${seq} ${new Date().toISOString()} method=${request.method || "?"} url=${url}`);
   try {
-    if (Log.level >= 4) {
-      const slots = ["body", "bodyBytes", "rawBody"].map((k) => `${k}=${response[k]?.constructor?.name ?? typeof response[k]}/${response[k]?.byteLength ?? response[k]?.length ?? 0}`);
-      Log.debug(`[wloc] response keys=${Object.keys(response).join(",")} status=${response.status ?? "-"} statusCode=${response.statusCode ?? "-"} ${slots.join(" ")}`);
-    }
-    const bytes = toByteArray(response.bodyBytes || response.rawBody || response.body);
+    const bytes = toByteArray(response.body);
     if (!bytes.length) {
       Log.warn(`[wloc] #${seq} 无二进制 body，跳过`);
       return response;
@@ -354,8 +350,6 @@ function handleResponse(request, response, settings) {
     const { data: patched, stats } = patchBody(data, settings);
     const out = new Uint8Array(patched);
     response.body = out;
-    response.bodyBytes = out;
-    response.rawBody = out;
     if (response.headers) {
       delete response.headers["Content-Encoding"];
       delete response.headers["content-encoding"];
@@ -364,7 +358,6 @@ function handleResponse(request, response, settings) {
       response.headers["Content-Length"] = String(out.length);
     }
     response.status = 200;
-    response.statusCode = 200;
     Log.info(
       `[wloc] #${settings.seq} PATCH ok 目标: ${settings.longitude},${settings.latitude} accuracy ${stats.accOrig ?? "?"}→${settings.accuracy} locations=${stats.locations} wifi=${stats.wifi} cell=${stats.cell} skipped=${stats.skipped} bytes=${out.length}`,
     );
