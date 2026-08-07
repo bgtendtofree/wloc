@@ -68,7 +68,7 @@ assert(
 	`passthrough failed\n${r6.stdout}`,
 );
 
-// 负坐标 (西半球): writeVarint 负数补码分支, 独立 BigInt 实现验证字节
+// 负坐标 (西半球): writeVarint 64 位补码编码, 独立 BigInt 实现验证字节
 const r7 = run("west");
 assert(
 	/PATCH ok 目标: -122.01,37.33/.test(r7.stdout),

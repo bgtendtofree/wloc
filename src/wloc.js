@@ -98,39 +98,13 @@ function readVarint(data, offset) {
 }
 
 function writeVarint(value) {
-  let v = Math.floor(value);
-  if (v >= 0) {
-    const out = [];
-    for (; v >= 128; ) {
-      out.push((v % 128) | 128);
-      v = Math.floor(v / 128);
-    }
-    out.push(v);
-    return out;
-  }
-  // 负数 (西/南半球坐标): 10 字节 varint, 64 位二进制补码
-  const bytes = new Array(8).fill(0);
-  let r = -v;
-  for (let i = 0; i < 8; i++) {
-    bytes[i] = 255 & r;
-    r = Math.floor(r / 256);
-  }
-  let carry = 1;
-  for (let i = 0; i < 8; i++) {
-    const t = (255 & ~bytes[i]) + carry;
-    bytes[i] = 255 & t;
-    carry = t >> 8;
-  }
+  let v = BigInt.asUintN(64, BigInt(Math.floor(value)));
   const out = [];
-  for (let i = 0; i < 10; i++) {
-    let t = 0;
-    for (let j = 0; j < 7; j++) {
-      const n = 7 * i + j;
-      if (n < 64) t |= ((bytes[n >> 3] >> (7 & n)) & 1) << j;
-    }
-    if (i < 9) t |= 128;
-    out.push(t);
-  }
+  do {
+    const b = Number(v & 127n);
+    v >>= 7n;
+    out.push(b | (v ? 128 : 0));
+  } while (v);
   return out;
 }
 
@@ -356,6 +330,10 @@ function handleResponse(request, response, settings) {
   Log.group(`[wloc] #${seq} Response ${url}`);
   Log.info(`[wloc] #${seq} ${new Date().toISOString()} method=${request.method || "?"} url=${url}`);
   try {
+    if (Log.level >= 4) {
+      const slots = ["body", "bodyBytes", "rawBody"].map((k) => `${k}=${response[k]?.constructor?.name ?? typeof response[k]}/${response[k]?.byteLength ?? response[k]?.length ?? 0}`);
+      Log.debug(`[wloc] response keys=${Object.keys(response).join(",")} status=${response.status ?? "-"} statusCode=${response.statusCode ?? "-"} ${slots.join(" ")}`);
+    }
     const bytes = toByteArray(response.bodyBytes || response.rawBody || response.body);
     if (!bytes.length) {
       Log.warn(`[wloc] #${seq} 无二进制 body，跳过`);
@@ -403,8 +381,23 @@ function handleResponse(request, response, settings) {
 // 优先级: 快捷指令/接口储存 ($persistentStore) > 模块参数 > 默认值
 const DEFAULTS = { longitude: null, latitude: null, accuracy: 25, logLevel: "info" };
 
+function parseArgs(input) {
+  const out = {};
+  if (typeof input !== "string") return out;
+  for (const pair of input.replace(/^\?/, "").split("&")) {
+    if (!pair) continue;
+    const i = pair.indexOf("=");
+    const rawKey = i < 0 ? pair : pair.slice(0, i);
+    const rawValue = i < 0 ? "" : pair.slice(i + 1);
+    try {
+      out[decodeURIComponent(rawKey)] = decodeURIComponent(rawValue.replace(/\+/g, " "));
+    } catch {}
+  }
+  return out;
+}
+
 function loadSettings() {
-  const args = new URLSearchParams(globalThis.$argument || "");
+  const args = parseArgs(globalThis.$argument);
   const saved = Store.get("wloc_settings");
   const s = { ...DEFAULTS };
   const inRange = (v, min, max) => {
@@ -416,13 +409,13 @@ function loadSettings() {
     const n = inRange(from, min, max);
     if (n != null) s[key] = n;
   };
-  apply(args.get("longitude"), "longitude", -180, 180);
-  apply(args.get("latitude"), "latitude", -90, 90);
-  if (args.get("accuracy")) {
-    const n = parseInt(args.get("accuracy"), 10);
+  apply(args.longitude, "longitude", -180, 180);
+  apply(args.latitude, "latitude", -90, 90);
+  if (args.accuracy) {
+    const n = parseInt(args.accuracy, 10);
     if (Number.isFinite(n) && n >= 0) s.accuracy = n;
   }
-  if (args.get("logLevel")) s.logLevel = args.get("logLevel");
+  if (args.logLevel) s.logLevel = args.logLevel;
   if (saved && typeof saved === "object") {
     apply(saved.longitude, "longitude", -180, 180);
     apply(saved.latitude, "latitude", -90, 90);
@@ -431,12 +424,6 @@ function loadSettings() {
       if (Number.isFinite(n) && n >= 0) s.accuracy = n;
     }
     Log.info(`[settings] 使用已保存坐标: ${s.longitude},${s.latitude}`);
-  } else if (s.longitude === 113.94114 && s.latitude === 22.544577) {
-    // 哨兵: 持久化为空且模块参数未改动 = 用户没设过坐标, 透传
-    s.longitude = null;
-    s.latitude = null;
-    Log.info("[settings] 透传模式：持久化数据为空且为默认参数，不修改定位");
-    return s;
   }
   if (s.longitude == null || s.latitude == null) Log.info("[settings] 透传模式：未设置坐标，将不修改定位响应");
   else Log.debug(`[settings] lon=${s.longitude} lat=${s.latitude} acc=${s.accuracy}`);

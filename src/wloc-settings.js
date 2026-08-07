@@ -106,9 +106,24 @@ function gcj02ToWgs84(lat, lon) {
 // ==================== 请求处理 ====================
 const KEY = "wloc_settings";
 
+function parseQuery(input) {
+  const out = {};
+  for (const pair of input.split("&")) {
+    if (!pair) continue;
+    const i = pair.indexOf("=");
+    const rawKey = i < 0 ? pair : pair.slice(0, i);
+    const rawValue = i < 0 ? "" : pair.slice(i + 1);
+    try {
+      const key = decodeURIComponent(rawKey.replace(/\+/g, " "));
+      if (!(key in out)) out[key] = decodeURIComponent(rawValue.replace(/\+/g, " "));
+    } catch {}
+  }
+  return out;
+}
+
 const url = $request.url || "";
-const query = new URLSearchParams(url.split("?")[1] || "");
-const action = query.get("action") || "save";
+const query = parseQuery(url.split("?")[1] || "");
+const action = query.action || "save";
 
 let result;
 if (action === "query") {
@@ -141,11 +156,11 @@ if (action === "query") {
   }
 } else {
   // 保存坐标 (cs=gcj 时先设备端转 WGS84)
-  const lonRaw = query.get("lon") || query.get("longitude");
-  const latRaw = query.get("lat") || query.get("latitude");
+  const lonRaw = query.lon || query.longitude;
+  const latRaw = query.lat || query.latitude;
   let lon = parseFloat(lonRaw);
   let lat = parseFloat(latRaw);
-  const acc = parseInt(query.get("acc") || query.get("accuracy") || "25", 10);
+  const acc = parseInt(query.acc || query.accuracy || "25", 10);
   if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
     result = { success: false, error: "lon 超出范围 (-180..180)" };
   } else if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
@@ -153,7 +168,7 @@ if (action === "query") {
   } else if (!Number.isFinite(acc) || acc < 0) {
     result = { success: false, error: "acc 非法 (需 ≥0)" };
   } else {
-    if ((query.get("cs") || "").toLowerCase() === "gcj") {
+    if ((query.cs || "").toLowerCase() === "gcj") {
       const w = gcj02ToWgs84(lat, lon);
       lon = w.lon;
       lat = w.lat;

@@ -92,7 +92,7 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 | cs | `gcj` = 输入为 GCJ-02, 设备端转 WGS84 再存 | 不转换 |
 | action | `clear` 清除 / `query` 查询 | save |
 
-模块参数 longitude/latitude/accuracy/logLevel 为兜底默认; 已储存坐标优先。持久化为空 + 参数为默认值时自动透传 (不修改定位)。
+模块参数 longitude/latitude 可选, accuracy/logLevel 有默认值; 已储存坐标优先。未储存且未设置模块坐标时自动透传 (不修改定位)。
 
 ## 本地自检
 

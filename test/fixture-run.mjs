@@ -4,6 +4,8 @@
 import fs from "node:fs";
 import zlib from "node:zlib";
 
+globalThis.URLSearchParams = undefined; // Shadowrocket JavaScriptCore 沙箱不提供
+
 const mode = process.argv[2] || "wifi";
 
 const vi = (e) => {
@@ -60,7 +62,7 @@ switch (mode) {
 		body = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 		break;
 	case "west":
-		// 西半球目标: 负坐标写回 (触发 writeVarint 负数补码分支)
+		// 西半球目标: 负坐标写回 (触发 writeVarint 64 位补码编码)
 		body = frame([
 			...len2(2, [
 				...len2(1, str("aa:bb:cc:dd:ee:ff")),
