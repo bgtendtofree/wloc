@@ -66,6 +66,7 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 
 - 室内 (GPS 弱): 假位置稳定, 实测不飘 ✓
 - 窗边 (有 GPS 信号): 假位置短暂出现后约 1 秒被真实位置盖掉 ✗ — GPS 优先于网络定位, 软件层无解
+- 国际区 `gsp-ssl.ls.apple.com` 覆盖已加入, 未经实测 — 非国区 Apple ID 首次使用时看日志 `PATCH ok` 确认
 
 ## 诊断日志
 
@@ -86,8 +87,8 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 
 | 参数 | 说明 | 默认 |
 |------|------|------|
-| lon/lat | 目标坐标 (WGS84) | 必填 |
-| acc | 精度(米) | 25 |
+| lon/lat | 目标坐标 (WGS84), lon ∈ [-180,180], lat ∈ [-90,90]; 超范围返回 `success:false` | 必填 |
+| acc | 精度(米), ≥0 | 25 |
 | cs | `gcj` = 输入为 GCJ-02, 设备端转 WGS84 再存 | 不转换 |
 | action | `clear` 清除 / `query` 查询 | save |
 
@@ -96,8 +97,8 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 ## 本地自检
 
 ```
-node test/node-demo.mjs      # wloc.js patch + 诊断日志 (wifi/cell/gzip/透传)
-node test/settings-demo.mjs  # GCJ 换算 + 透传
+node test/node-demo.mjs      # wloc.js patch + 诊断日志 (wifi/cell/gzip/透传/负坐标)
+node test/settings-demo.mjs  # GCJ 换算 + 范围/acc 校验 + 零坐标
 ```
 
 ## 代码形态
