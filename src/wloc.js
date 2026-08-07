@@ -68,20 +68,6 @@ function writeBox(box) {
   require("fs").writeFileSync("box.dat", JSON.stringify(box));
 }
 
-// ==================== 模块参数解析 ====================
-function parseArgs(input) {
-  const out = {};
-  if (typeof input !== "string" || !input) return out;
-  for (const pair of input.replace(/^\?/, "").split("&")) {
-    if (!pair) continue;
-    const [k = "", v = ""] = pair.split("=", 2);
-    try {
-      out[decodeURIComponent(k)] = decodeURIComponent(v.replace(/\+/g, " "));
-    } catch {}
-  }
-  return out;
-}
-
 // ==================== 结束 ====================
 function done(result = {}) {
   Log.print(" 执行结束!");
@@ -282,11 +268,7 @@ function patchOuterMessage(data, target, stats) {
 
 // ==================== 帧定位与重打包 ====================
 // 响应体: N 字节头 + 2 字节大端长度 + protobuf payload (+ 可能的尾部)
-// 头部结构随版本变化, 故按候选偏移逐个尝试, 失败回滚统计再试下一个。
-
-// wifi/cell 递增必由 location patch 触发, 比较 locations 增量即等价于全量 stats 增量
-const snapshotStats = (s) => ({ wifi: s.wifi | 0, cell: s.cell | 0, locations: s.locations | 0, skipped: s.skipped | 0, accOrig: s.accOrig });
-const restoreStats = (s, snap) => Object.assign(s, snap);
+// 头部结构随版本变化, 故按候选偏移逐个尝试, 每个候选使用独立统计。
 
 function bytesEqual(a, b) {
   if (a.length !== b.length) return false;
@@ -302,18 +284,13 @@ function patchFrameAt(body, base, target, stats) {
   const head = body.slice(0, base + 8);
   const payload = body.slice(base + 10, base + 10 + payloadLen);
   const tail = body.slice(base + 10 + payloadLen);
-  const before = snapshotStats(stats);
   const patched = patchOuterMessage(payload, target, stats);
   if (patched.length > 65535) throw new Error("patched payload too large: " + patched.length);
-  if (stats.locations === before.locations || bytesEqual(payload, patched)) {
-    restoreStats(stats, before);
-    throw new Error("frame parsed but no patchable wloc payload at " + base);
-  }
+  if (!stats.locations || bytesEqual(payload, patched)) throw new Error("frame parsed but no patchable wloc payload at " + base);
   return concat([head, [(patched.length >> 8) & 255, 255 & patched.length], patched, tail]);
 }
 
 function patchBody(body, target) {
-  const stats = { wifi: 0, cell: 0, locations: 0, skipped: 0 };
   if (body.length < 10) throw new Error("body too short: " + body.length);
 
   // 候选偏移: 常见帧头长度优先, 再全扫
@@ -323,13 +300,12 @@ function patchBody(body, target) {
 
   const errors = [];
   for (const base of offsets) {
-    const snap = snapshotStats(stats);
+    const stats = { wifi: 0, cell: 0, locations: 0, skipped: 0 };
     try {
       const data = patchFrameAt(body, base, target, stats);
       Log.info(`[wloc] patched at offset=${base} locations=${stats.locations} wifi=${stats.wifi} cell=${stats.cell} skipped=${stats.skipped}`);
       return { data, stats };
     } catch (e) {
-      restoreStats(stats, snap);
       if (errors.length < 6) errors.push("@" + base + ":" + (e?.message || String(e)));
     }
   }
@@ -338,17 +314,15 @@ function patchBody(body, target) {
   const rawErrors = [];
   const rawMax = Math.min(256, body.length);
   for (let i = 0; i <= rawMax; i++) {
-    const snap = snapshotStats(stats);
+    const stats = { wifi: 0, cell: 0, locations: 0, skipped: 0 };
     try {
       const payload = body.slice(i);
       const patched = patchOuterMessage(payload, target, stats);
-      if (stats.locations !== snap.locations && !bytesEqual(payload, patched)) {
+      if (stats.locations && !bytesEqual(payload, patched)) {
         Log.info(`[wloc] patched via raw fallback locations=${stats.locations} wifi=${stats.wifi} cell=${stats.cell} skipped=${stats.skipped}`);
         return { data: concat([body.slice(0, i), patched]), stats };
       }
-      restoreStats(stats, snap);
     } catch (e) {
-      restoreStats(stats, snap);
       if (rawErrors.length < 6) rawErrors.push("raw@" + i + ":" + (e?.message || String(e)));
     }
   }
@@ -376,7 +350,7 @@ function toByteArray(body) {
   return [];
 }
 
-async function handleResponse(request, response, settings) {
+function handleResponse(request, response, settings) {
   const url = request.url || "";
   const seq = settings.seq ?? "-";
   Log.group(`[wloc] #${seq} Response ${url}`);
@@ -430,7 +404,7 @@ async function handleResponse(request, response, settings) {
 const DEFAULTS = { longitude: null, latitude: null, accuracy: 25, logLevel: "info" };
 
 function loadSettings() {
-  const args = parseArgs(globalThis.$argument);
+  const args = new URLSearchParams(globalThis.$argument || "");
   const saved = Store.get("wloc_settings");
   const s = { ...DEFAULTS };
   const inRange = (v, min, max) => {
@@ -442,13 +416,13 @@ function loadSettings() {
     const n = inRange(from, min, max);
     if (n != null) s[key] = n;
   };
-  apply(args.longitude, "longitude", -180, 180);
-  apply(args.latitude, "latitude", -90, 90);
-  if (args.accuracy != null && args.accuracy !== "") {
-    const n = parseInt(args.accuracy, 10);
+  apply(args.get("longitude"), "longitude", -180, 180);
+  apply(args.get("latitude"), "latitude", -90, 90);
+  if (args.get("accuracy")) {
+    const n = parseInt(args.get("accuracy"), 10);
     if (Number.isFinite(n) && n >= 0) s.accuracy = n;
   }
-  if (args.logLevel) s.logLevel = args.logLevel;
+  if (args.get("logLevel")) s.logLevel = args.get("logLevel");
   if (saved && typeof saved === "object") {
     apply(saved.longitude, "longitude", -180, 180);
     apply(saved.latitude, "latitude", -90, 90);
@@ -471,25 +445,24 @@ function loadSettings() {
 
 // ==================== 入口 ====================
 let result;
-(async () => {
+try {
   const response = typeof $response !== "undefined" ? $response : undefined;
   if (!response) {
     Log.warn("[wloc] 非响应模式，跳过");
-    return;
+  } else {
+    const settings = loadSettings();
+    settings.seq = Store.get("wloc_seq", 0) + 1; // 跨请求持久化序号, 用于对齐日志与定位回跳时刻
+    Store.set("wloc_seq", settings.seq);
+    Log.logLevel = settings.logLevel;
+    result = handleResponse($request, response, settings);
   }
-  const settings = loadSettings();
-  settings.seq = Store.get("wloc_seq", 0) + 1; // 跨请求持久化序号, 用于对齐日志与定位回跳时刻
-  Store.set("wloc_seq", settings.seq);
-  Log.logLevel = settings.logLevel;
-  result = await handleResponse($request, response, settings);
-})()
-  .catch((e) => Log.error(e))
-  .finally(() => {
-    if (typeof result === "object") {
-      if (result.headers?.["Content-Encoding"]) result.headers["Content-Encoding"] = "identity";
-      if (result.headers?.["content-encoding"]) result.headers["content-encoding"] = "identity";
-      done({ response: result });
-    } else {
-      done({});
-    }
-  });
+} catch (e) {
+  Log.error(e);
+}
+if (typeof result === "object") {
+  if (result.headers?.["Content-Encoding"]) result.headers["Content-Encoding"] = "identity";
+  if (result.headers?.["content-encoding"]) result.headers["content-encoding"] = "identity";
+  done({ response: result });
+} else {
+  done({});
+}

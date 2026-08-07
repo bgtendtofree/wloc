@@ -9,22 +9,8 @@ const ENV = typeof process !== "undefined" && process?.versions?.node ? "Node" :
 
 // ==================== 日志 ====================
 const Log = {
-  level: 3,
-  set logLevel(v) {
-    const map = { off: 0, error: 1, warn: 2, warning: 2, info: 3, debug: 4, all: 5 };
-    this.level = typeof v === "number" ? v : (map[String(v).toLowerCase()] ?? 2);
-  },
-  print(...args) {
-    if (this.level === 0) return;
-    const lines = args.flatMap((a) => {
-      if (typeof a === "object") return [JSON.stringify(a)];
-      return String(a).split(/\r?\n/);
-    });
-    console.log(["", ...lines].join("\n"));
-  },
-  info(...a) { if (this.level >= 3) this.print(...a.map((x) => ` ${x}`)); },
-  error(...a) { if (this.level >= 1) this.print(...a.map((x) => ` ${x?.stack ?? x}`)); },
-  debug(...a) { if (this.level >= 4) this.print(...a.map((x) => ` ${x}`)); },
+  info(...args) { console.log("", ...args); },
+  error(...args) { console.log("", ...args); },
 };
 
 // ==================== 持久化存储 ====================
@@ -120,31 +106,9 @@ function gcj02ToWgs84(lat, lon) {
 // ==================== 请求处理 ====================
 const KEY = "wloc_settings";
 
-function parseQuery(url) {
-  const out = new Map();
-  const qs = url.split("?")[1] || "";
-  for (const pair of qs.split("&")) {
-    if (!pair) continue;
-    const i = pair.indexOf("=");
-    const k = i === -1 ? pair : pair.slice(0, i);
-    const v = i === -1 ? "" : pair.slice(i + 1);
-    const dk = safeDecode(k);
-    if (!out.has(dk)) out.set(dk, safeDecode(v));
-  }
-  return out;
-}
-function safeDecode(s) {
-  try {
-    return decodeURIComponent(String(s).replace(/\+/g, " "));
-  } catch {
-    return String(s);
-  }
-}
-
 const url = $request.url || "";
-const query = parseQuery(url);
+const query = new URLSearchParams(url.split("?")[1] || "");
 const action = query.get("action") || "save";
-Log.debug(`[wloc-settings] url=${url}, action=${action}`);
 
 let result;
 if (action === "query") {
@@ -159,7 +123,6 @@ if (action === "query") {
         accuracy: saved.accuracy || 25,
         updatedAt: saved.updatedAt || null,
       };
-      Log.debug(`[wloc-settings] 查询: ${saved.longitude}, ${saved.latitude}`);
     } else {
       result = { success: false, error: "无已保存的坐标" };
     }
@@ -221,8 +184,6 @@ done({
     status: 200,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
     },
     body: JSON.stringify(result),
   },
