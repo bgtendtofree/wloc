@@ -68,6 +68,35 @@ assert(
 	`passthrough failed\n${r6.stdout}`,
 );
 
+// 负坐标 (西半球): writeVarint 负数补码分支, 独立 BigInt 实现验证字节
+const r7 = run("west");
+assert(
+	/PATCH ok 目标: -122.01,37.33/.test(r7.stdout),
+	`west target missing\n${r7.stdout}`,
+);
+const hexM = r7.stdout.match(/WEST_HEX ([0-9a-f]+)/);
+assert(hexM, `west body not captured\n${r7.stdout}`);
+const payload = Buffer.from(hexM[1], "hex").subarray(10); // 8 字节帧头 + 2 字节长度
+const varint = (v) => {
+	let x = BigInt(v);
+	if (x < 0n) x = BigInt.asUintN(64, x);
+	const out = [];
+	do {
+		let b = Number(x & 0x7fn);
+		x >>= 7n;
+		out.push(b | (x ? 0x80 : 0));
+	} while (x);
+	return out;
+};
+assert(
+	payload.indexOf(Buffer.from(varint(3733000000))) !== -1,
+	"west lat bytes wrong",
+);
+assert(
+	payload.indexOf(Buffer.from(varint(-12201000000))) !== -1,
+	"west lon bytes wrong",
+);
+
 console.log(
-	"OK: wifi/cell/gzip/empty/passthrough all pass, seq increments, accuracy guard works, no BSSID in logs",
+	"OK: wifi/cell/gzip/empty/passthrough/west all pass, seq increments, accuracy guard works, negative coords encode correctly, no BSSID in logs",
 );

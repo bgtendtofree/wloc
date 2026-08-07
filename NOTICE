@@ -1,5 +1,5 @@
 This project includes code from pako (https://github.com/nodeca/pako),
-a zlib-compatible JavaScript compression library, vendored in dist/wloc.js.
+a zlib-compatible JavaScript compression library, vendored in src/wloc.js.
 
 pako is licensed under the MIT License:
 (C) 2014-2017 by Vitaly Puzrin and Andrey Tupitsin.

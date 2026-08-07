@@ -178,15 +178,23 @@ if (action === "query") {
   }
 } else {
   // 保存坐标 (cs=gcj 时先设备端转 WGS84)
-  let lon = parseFloat(query.get("lon") || query.get("longitude") || "0");
-  let lat = parseFloat(query.get("lat") || query.get("latitude") || "0");
+  const lonRaw = query.get("lon") || query.get("longitude");
+  const latRaw = query.get("lat") || query.get("latitude");
+  let lon = parseFloat(lonRaw);
+  let lat = parseFloat(latRaw);
   const acc = parseInt(query.get("acc") || query.get("accuracy") || "25", 10);
-  if ((query.get("cs") || "").toLowerCase() === "gcj") {
-    const w = gcj02ToWgs84(lat, lon);
-    lon = w.lon;
-    lat = w.lat;
-  }
-  if (lon && lat) {
+  if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
+    result = { success: false, error: "lon 超出范围 (-180..180)" };
+  } else if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    result = { success: false, error: "lat 超出范围 (-90..90)" };
+  } else if (!Number.isFinite(acc) || acc < 0) {
+    result = { success: false, error: "acc 非法 (需 ≥0)" };
+  } else {
+    if ((query.get("cs") || "").toLowerCase() === "gcj") {
+      const w = gcj02ToWgs84(lat, lon);
+      lon = w.lon;
+      lat = w.lat;
+    }
     const record = {
       longitude: lon,
       latitude: lat,
@@ -205,8 +213,6 @@ if (action === "query") {
       result = { success: false, error: e.message || "写入失败" };
       Log.error(`[wloc-settings] ${e.message}`);
     }
-  } else {
-    result = { success: false, error: "缺少 lon/lat 参数" };
   }
 }
 

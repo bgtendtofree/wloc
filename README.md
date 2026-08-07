@@ -10,7 +10,7 @@
 https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc.module
 ```
 
-启用模块, 开启 MITM 并信任证书 (`gs-loc.apple.com`)。
+启用模块, 开启 MITM 并信任证书 (拦截国区 `gs-loc(-cn).apple.com` 与国际区 `gsp-ssl.ls.apple.com`)。
 
 ## 快捷指令: 设位置
 
@@ -57,7 +57,7 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 ```
 
 两条规则:
-- `wloc.js` — 拦截 `/clls/wloc` 响应, 解析 protobuf 替换经纬度/精度
+- `wloc.js` — 拦截 `/clls/wloc` 响应 (国区 gs-loc(-cn).apple.com + 国际区 gsp-ssl.ls.apple.com), 解析 protobuf 替换经纬度/精度
 - `wloc-settings.js` — 拦截 `/wloc-settings/save`, 写持久化存储 (含设备端 GCJ-02→WGS84)
 
 ## 边界 (实测)

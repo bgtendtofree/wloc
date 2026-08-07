@@ -53,6 +53,36 @@ assert(
 	`out-of-China point was modified: ${JSON.stringify(fr)}`,
 );
 
+// out-of-range lon -> rejected, store unchanged
+const before = run(
+	"https://gs-loc.apple.com/wloc-settings/save?lon=116.3975&lat=39.9087",
+);
+const after = run(
+	"https://gs-loc.apple.com/wloc-settings/save?lon=999&lat=39.9087",
+);
+assert(
+	after.longitude === before.longitude && after.latitude === before.latitude,
+	`out-of-range lon not rejected: ${JSON.stringify(after)}`,
+);
+
+// negative accuracy -> rejected, store unchanged
+const after2 = run(
+	"https://gs-loc.apple.com/wloc-settings/save?lon=116.3975&lat=39.9087&acc=-5",
+);
+assert(
+	after2.longitude === before.longitude && after2.latitude === before.latitude,
+	`negative acc not rejected: ${JSON.stringify(after2)}`,
+);
+
+// lon=0 lat=0 (falsy-zero) -> must be saved, not dropped
+const zero = run(
+	"https://gs-loc.apple.com/wloc-settings/save?lon=0&lat=0",
+);
+assert(
+	zero.longitude === 0 && zero.latitude === 0,
+	`zero coord dropped: ${JSON.stringify(zero)}`,
+);
+
 console.log(
-	`OK: cs=gcj in-China shift=${shift.toFixed(5)}deg, no-cs untouched, out-of-China untouched`,
+	`OK: cs=gcj in-China shift=${shift.toFixed(5)}deg, no-cs untouched, out-of-China untouched, range/acc validation rejects, zero coord accepted`,
 );

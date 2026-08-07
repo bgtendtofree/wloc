@@ -433,14 +433,29 @@ function loadSettings() {
   const args = parseArgs(globalThis.$argument);
   const saved = Store.get("wloc_settings");
   const s = { ...DEFAULTS };
-  if (args.longitude) s.longitude = parseFloat(args.longitude);
-  if (args.latitude) s.latitude = parseFloat(args.latitude);
-  if (args.accuracy) s.accuracy = parseInt(args.accuracy, 10);
+  const inRange = (v, min, max) => {
+    const n = parseFloat(v);
+    return Number.isFinite(n) && n >= min && n <= max ? n : null;
+  };
+  const apply = (from, key, min, max) => {
+    if (from == null || from === "") return;
+    const n = inRange(from, min, max);
+    if (n != null) s[key] = n;
+  };
+  apply(args.longitude, "longitude", -180, 180);
+  apply(args.latitude, "latitude", -90, 90);
+  if (args.accuracy != null && args.accuracy !== "") {
+    const n = parseInt(args.accuracy, 10);
+    if (Number.isFinite(n) && n >= 0) s.accuracy = n;
+  }
   if (args.logLevel) s.logLevel = args.logLevel;
   if (saved && typeof saved === "object") {
-    if (saved.longitude) s.longitude = parseFloat(saved.longitude);
-    if (saved.latitude) s.latitude = parseFloat(saved.latitude);
-    if (saved.accuracy) s.accuracy = parseInt(saved.accuracy, 10);
+    apply(saved.longitude, "longitude", -180, 180);
+    apply(saved.latitude, "latitude", -90, 90);
+    if (saved.accuracy != null && saved.accuracy !== "") {
+      const n = parseInt(saved.accuracy, 10);
+      if (Number.isFinite(n) && n >= 0) s.accuracy = n;
+    }
     Log.info(`[settings] 使用已保存坐标: ${s.longitude},${s.latitude}`);
   } else if (s.longitude === 113.94114 && s.latitude === 22.544577) {
     // 哨兵: 持久化为空且模块参数未改动 = 用户没设过坐标, 透传
