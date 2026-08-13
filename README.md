@@ -10,7 +10,15 @@ QX 首页风车 → 重写 → 引用 → + → 粘贴:
 https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc.qxrewrite
 ```
 
-资源内 `hostname` 行自动配置 MITM 主机名; 仍需手动: 设置 → MitM → 生成证书 → 配置证书 (安装并信任) → 打开 MitM 总开关。拦截域名: 国区 `gs-loc(-cn).apple.com` 与国际区 `gsp-ssl.ls.apple.com`。
+再配证书 (HTTPS 重写必须 MITM 解密, 证书手动装):
+
+1. QX 设置 → MitM → **生成证书**
+2. **配置证书** → 跳转 Safari 下载描述文件 → 允许安装
+3. 系统设置 → 已下载描述文件 → 输入锁屏密码安装
+4. 系统设置 → 通用 → 关于本机 → **证书信任设置** → 勾选 Quantumult X CA
+5. 回 QX → MitM 开关打开
+
+`hostname` 行已自动配置 MITM 主机名; 拦截域名: 国区 `gs-loc(-cn).apple.com` 与国际区 `gsp-ssl.ls.apple.com`。装完证书看日志出现 `PATCH ok` 即通。
 
 ## 快捷指令: 设位置
 
