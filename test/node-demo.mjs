@@ -20,7 +20,7 @@ const assert = (cond, msg) => {
 	}
 };
 
-// wifi path + diagnostics + accuracy guard (locBad field3 must be skipped)
+// wifi path (ArrayBuffer bodyBytes) + diagnostics + accuracy guard (locBad field3 must be skipped)
 const r1 = run("wifi");
 assert(
 	/\[wloc\] #1 .*method=POST url=https:\/\/gs-loc\.apple\.com\/clls\/wloc/.test(
@@ -47,11 +47,11 @@ assert(
 	`cell patch failed\n${r3.stdout}`,
 );
 
-// gzip body
-const r4 = run("gzip");
+// 重写行脚本 URL # 参数 (accuracy=30): 已存坐标无 accuracy → 取 # 参数
+const r4 = run("args");
 assert(
-	/PATCH ok/.test(r4.stdout),
-	`gzip patch failed\n${r4.stdout}${r4.stderr}`,
+	/accuracy 65→30/.test(r4.stdout),
+	`# argument accuracy not applied\n${r4.stdout}${r4.stderr}`,
 );
 
 // empty/short body -> silent passthrough, no PATCH fail error
@@ -98,5 +98,5 @@ assert(
 );
 
 console.log(
-	"OK: wifi/cell/gzip/empty/passthrough/west all pass, seq increments, accuracy guard works, negative coords encode correctly, no BSSID in logs",
+	"OK: wifi(ArrayBuffer)/args(#参数)/cell/empty/passthrough/west all pass, seq increments, accuracy guard works, negative coords encode correctly, no BSSID in logs",
 );

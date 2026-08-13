@@ -1,11 +1,13 @@
-/* src/wloc-settings.js — Apple WLOC 定位修改 (Shadowrocket)
- * 拦截 gs-loc(-cn).apple.com/wloc-settings/save 请求, 读写 $persistentStore 中的目标坐标。
- * 全程设备内完成; cs=gcj 时输入按 GCJ-02 处理, 设备端转 WGS84 再储存。
+/* src/wloc-settings.js — Apple WLOC 定位修改 (Quantumult X)
+ * 拦截 gs-loc(-cn).apple.com/wloc-settings/save 的响应, 返回合成 JSON。
+ * QX 请求阶段脚本无法伪造响应, 故走 script-response-body: 请求正常出网 (Apple 返回 404),
+ * 脚本从 $request.url 解析参数写入 $prefs, 再用 $done 覆盖响应为 200 + JSON。
+ * 全程坐标不出设备之外的第三方; cs=gcj 时输入按 GCJ-02 处理, 设备端转 WGS84 再储存。
  * 源码即发布物, 无构建步骤。
  */
 
 // ==================== 运行环境 ====================
-const ENV = typeof process !== "undefined" && process?.versions?.node ? "Node" : "Proxy";
+const ENV = typeof process !== "undefined" && process?.versions?.node ? "Node" : "QX";
 
 // ==================== 日志 ====================
 const Log = {
@@ -16,7 +18,7 @@ const Log = {
 // ==================== 持久化存储 ====================
 const Store = {
   get(key, fallback = null) {
-    let v = ENV === "Node" ? readBox()[key] : $persistentStore.read(key);
+    let v = ENV === "Node" ? readBox()[key] : $prefs.valueForKey(key);
     try { v = JSON.parse(v); } catch {}
     return v ?? fallback;
   },
@@ -28,7 +30,7 @@ const Store = {
       writeBox(box);
       return true;
     }
-    return $persistentStore.write(s, key);
+    return $prefs.setValueForKey(s, key);
   },
 };
 
@@ -194,12 +196,11 @@ if (action === "query") {
   }
 }
 
+// QX script-response-body: status 为完整状态行, 覆盖 Apple 的 404
 done({
-  response: {
-    status: 200,
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(result),
+  status: "HTTP/1.1 200 OK",
+  headers: {
+    "Content-Type": "application/json",
   },
+  body: JSON.stringify(result),
 });
