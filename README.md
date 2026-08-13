@@ -79,7 +79,7 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 
 ## 诊断日志
 
-QX 设置 → 其他设置 → 日志级别选「调试」, 日志文件搜 `[wloc]`:
+QX 风车 → 日志 → **长按日志栏目** → 二级菜单「日志文件」→ 日志级别设 **Debug** (默认 Info, 脚本 console.log 不输出), 日志里搜 `[wloc]`:
 
 ```
 [wloc] #37 2026-08-06T08:19:08Z method=POST url=https://gs-loc-cn.apple.com/clls/wloc
