@@ -4,8 +4,6 @@
 //         脚本 URL # 参数经 $environment.sourcePath, 输出 $done({bodyBytes})。
 
 const Platform = {
-  name: "QX",
-
   // 存储: 只收字符串
   storeGet(key) { return $prefs.valueForKey(key); },
   storeSet(key, value) { return $prefs.setValueForKey(value, key); },

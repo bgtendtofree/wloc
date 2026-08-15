@@ -58,3 +58,16 @@ export function wlocBody(mode = "wifi") {
 
 export const WLOC_URL = "https://gs-loc.apple.com/clls/wloc";
 export const SAVE_URL = "https://gs-loc.apple.com/wloc-settings/save";
+
+// 独立实现的正整数 varint 编码 (负值取 64 位补码), 用于验证 writeVarint 输出字节
+export const varintBytes = (v) => {
+  let x = BigInt(v);
+  if (x < 0n) x = BigInt.asUintN(64, x);
+  const out = [];
+  do {
+    let b = Number(x & 0x7fn);
+    x >>= 7n;
+    out.push(b | (x ? 0x80 : 0));
+  } while (x);
+  return out;
+};

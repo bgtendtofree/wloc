@@ -3,21 +3,6 @@
 
 const KEY = "wloc_settings";
 
-function parseQuery(input) {
-  const out = {};
-  for (const pair of input.split("&")) {
-    if (!pair) continue;
-    const i = pair.indexOf("=");
-    const rawKey = i < 0 ? pair : pair.slice(0, i);
-    const rawValue = i < 0 ? "" : pair.slice(i + 1);
-    try {
-      const key = decodeURIComponent(rawKey.replace(/\+/g, " "));
-      if (!(key in out)) out[key] = decodeURIComponent(rawValue.replace(/\+/g, " "));
-    } catch {}
-  }
-  return out;
-}
-
 function processSettings(query, storeGet, storeSet) {
   const action = query.action || "save";
   let result;

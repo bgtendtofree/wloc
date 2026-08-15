@@ -3,6 +3,6 @@
 // 两种场景都从 $request.url 取参数, 输出由 Platform.jsonDone 定型。
 
 const url = Platform.requestUrl();
-const query = parseQuery(url.split("?")[1] || "");
+const query = parseParams(url.split("?")[1] || "");
 const result = processSettings(query, Platform.storeGet, Platform.storeSet);
 Platform.done(Platform.jsonDone(result));

@@ -36,17 +36,14 @@ function patchLocationMessage(data, target, stats) {
   return concat(parts);
 }
 
-function patchWifiMessage(data, target, stats) {
+// 嵌套子消息 patch 通用: 对 childField 的子消息做位置替换, 变更计入 stats[statsKey];
+// marker 为额外的形态校验 (wifi 用 BSSID 格式, cell 无)
+function patchChildMessage(data, target, stats, childField, statsKey, marker) {
   const fields = parseFields(data);
-  const looksLikeWifi = fields.some((f) => {
-    if (f.fieldNo !== 1 || f.wireType !== 2) return false;
-    const s = Array.from(f.value, (b) => String.fromCharCode(255 & b)).join("");
-    return /^[0-9a-fA-F]{1,2}(:[0-9a-fA-F]{1,2}){5}$/.test(s);
-  });
-  if (!looksLikeWifi) return data;
+  if (marker && !fields.some(marker)) return data;
   let changed = false;
   const parts = fields.map((f) => {
-    if (f.fieldNo === 2 && f.wireType === 2) {
+    if (f.fieldNo === childField && f.wireType === 2) {
       try {
         const patched = patchLocationMessage(f.value, target, stats);
         if (patched.length !== f.value.length || patched.join(",") !== f.value.join(",")) changed = true;
@@ -58,36 +55,22 @@ function patchWifiMessage(data, target, stats) {
     }
     return f.raw;
   });
-  if (changed) stats.wifi += 1;
+  if (changed) stats[statsKey] += 1;
   return concat(parts);
 }
 
-function patchCellMessage(data, target, stats) {
-  const fields = parseFields(data);
-  let changed = false;
-  const parts = fields.map((f) => {
-    if (f.fieldNo === 5 && f.wireType === 2) {
-      try {
-        const patched = patchLocationMessage(f.value, target, stats);
-        if (patched.length !== f.value.length || patched.join(",") !== f.value.join(",")) changed = true;
-        return encodeField(f.fieldNo, f.wireType, patched);
-      } catch {
-        stats.skipped += 1;
-        return f.raw;
-      }
-    }
-    return f.raw;
-  });
-  if (changed) stats.cell += 1;
-  return concat(parts);
-}
+const wifiMarker = (f) => {
+  if (f.fieldNo !== 1 || f.wireType !== 2) return false;
+  const s = Array.from(f.value, (b) => String.fromCharCode(255 & b)).join("");
+  return /^[0-9a-fA-F]{1,2}(:[0-9a-fA-F]{1,2}){5}$/.test(s);
+};
 
 function patchOuterMessage(data, target, stats) {
   const fields = parseFields(data);
   const parts = fields.map((f) => {
     if (f.wireType !== 2) return f.raw;
-    if (f.fieldNo === 2) return encodeField(f.fieldNo, f.wireType, patchWifiMessage(f.value, target, stats));
-    if (f.fieldNo === 22 || f.fieldNo === 24) return encodeField(f.fieldNo, f.wireType, patchCellMessage(f.value, target, stats));
+    if (f.fieldNo === 2) return encodeField(f.fieldNo, f.wireType, patchChildMessage(f.value, target, stats, 2, "wifi", wifiMarker));
+    if (f.fieldNo === 22 || f.fieldNo === 24) return encodeField(f.fieldNo, f.wireType, patchChildMessage(f.value, target, stats, 5, "cell", null));
     return f.raw;
   });
   return concat(parts);
@@ -198,7 +181,7 @@ function handleWloc(bytes, settings, ctx) {
 const DEFAULTS = { longitude: null, latitude: null, accuracy: 25, logLevel: "info" };
 
 function loadSettings(storeGet, storeSet, argument) {
-  const args = parseArgs(argument);
+  const args = parseParams(argument);
   const saved = storeGetParsed(storeGet, "wloc_settings");
   const s = { ...DEFAULTS };
   const inRange = (v, min, max) => {

@@ -29,8 +29,8 @@ const Log = {
   groupEnd() { this.groups.shift(); },
 };
 
-// key=value&... → 对象 (宽容解析)
-function parseArgs(input) {
+// key=value&... → 对象 (宽容解析); 键值均解码, "+" 视为空格, 首个键胜出
+function parseParams(input) {
   const out = {};
   if (typeof input !== "string") return out;
   for (const pair of input.replace(/^\?/, "").split("&")) {
@@ -39,7 +39,8 @@ function parseArgs(input) {
     const rawKey = i < 0 ? pair : pair.slice(0, i);
     const rawValue = i < 0 ? "" : pair.slice(i + 1);
     try {
-      out[decodeURIComponent(rawKey)] = decodeURIComponent(rawValue.replace(/\+/g, " "));
+      const key = decodeURIComponent(rawKey.replace(/\+/g, " "));
+      if (!(key in out)) out[key] = decodeURIComponent(rawValue.replace(/\+/g, " "));
     } catch {}
   }
   return out;

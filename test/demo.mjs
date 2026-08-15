@@ -4,7 +4,7 @@
 import vm from "node:vm";
 import zlib from "node:zlib";
 import { build } from "../build.mjs";
-import { wlocBody, WLOC_URL, SAVE_URL } from "./fixtures.mjs";
+import { wlocBody, WLOC_URL, SAVE_URL, varintBytes } from "./fixtures.mjs";
 
 const files = build();
 const assert = (cond, msg) => {
@@ -119,19 +119,8 @@ const seedWloc = (mode) => {
   const r7 = run("west");
   assert(/PATCH ok 目标: -122.01,37.33/.test(r7.logs), `QX west: target missing\n${r7.logs}`);
   const payload = Buffer.from(new Uint8Array(r7.donePayload.bodyBytes)).subarray(10);
-  const varint = (v) => {
-    let x = BigInt(v);
-    if (x < 0n) x = BigInt.asUintN(64, x);
-    const out = [];
-    do {
-      let b = Number(x & 0x7fn);
-      x >>= 7n;
-      out.push(b | (x ? 0x80 : 0));
-    } while (x);
-    return out;
-  };
-  assert(payload.indexOf(Buffer.from(varint(3733000000))) !== -1, "QX west: lat bytes wrong");
-  assert(payload.indexOf(Buffer.from(varint(-12201000000))) !== -1, "QX west: lon bytes wrong");
+  assert(payload.indexOf(Buffer.from(varintBytes(3733000000))) !== -1, "QX west: lat bytes wrong");
+  assert(payload.indexOf(Buffer.from(varintBytes(-12201000000))) !== -1, "QX west: lon bytes wrong");
 }
 
 // ==================== Surge: wloc ====================
@@ -174,19 +163,8 @@ const seedWloc = (mode) => {
   const r4 = run("west");
   assert(/PATCH ok 目标: -122.01,37.33/.test(r4.logs), `Surge west: target missing\n${r4.logs}`);
   const payload = Buffer.from(r4.donePayload.body).subarray(10);
-  const varint = (v) => {
-    let x = BigInt(v);
-    if (x < 0n) x = BigInt.asUintN(64, x);
-    const out = [];
-    do {
-      let b = Number(x & 0x7fn);
-      x >>= 7n;
-      out.push(b | (x ? 0x80 : 0));
-    } while (x);
-    return out;
-  };
-  assert(payload.indexOf(Buffer.from(varint(3733000000))) !== -1, "Surge west: lat bytes wrong");
-  assert(payload.indexOf(Buffer.from(varint(-12201000000))) !== -1, "Surge west: lon bytes wrong");
+  assert(payload.indexOf(Buffer.from(varintBytes(3733000000))) !== -1, "Surge west: lat bytes wrong");
+  assert(payload.indexOf(Buffer.from(varintBytes(-12201000000))) !== -1, "Surge west: lon bytes wrong");
 }
 
 // ==================== settings: 双平台 ====================

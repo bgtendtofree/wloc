@@ -5,7 +5,6 @@
 //            输出 $done({body, headers}) 或 $done({response:{status,headers,body}})。
 
 const Platform = {
-  name: "Surge",
   _unzipped: false, // 本次请求是否脚本侧解过 gzip
 
   // 存储: 只收字符串

@@ -34,8 +34,8 @@ const Log = {
   groupEnd() { this.groups.shift(); },
 };
 
-// key=value&... → 对象 (宽容解析)
-function parseArgs(input) {
+// key=value&... → 对象 (宽容解析); 键值均解码, "+" 视为空格, 首个键胜出
+function parseParams(input) {
   const out = {};
   if (typeof input !== "string") return out;
   for (const pair of input.replace(/^\?/, "").split("&")) {
@@ -44,7 +44,8 @@ function parseArgs(input) {
     const rawKey = i < 0 ? pair : pair.slice(0, i);
     const rawValue = i < 0 ? "" : pair.slice(i + 1);
     try {
-      out[decodeURIComponent(rawKey)] = decodeURIComponent(rawValue.replace(/\+/g, " "));
+      const key = decodeURIComponent(rawKey.replace(/\+/g, " "));
+      if (!(key in out)) out[key] = decodeURIComponent(rawValue.replace(/\+/g, " "));
     } catch {}
   }
   return out;
@@ -119,21 +120,6 @@ function gcj02ToWgs84(lat, lon) {
 // 输入 query 对象 + 存储读写函数 (经参数注入), 输出结果对象。
 
 const KEY = "wloc_settings";
-
-function parseQuery(input) {
-  const out = {};
-  for (const pair of input.split("&")) {
-    if (!pair) continue;
-    const i = pair.indexOf("=");
-    const rawKey = i < 0 ? pair : pair.slice(0, i);
-    const rawValue = i < 0 ? "" : pair.slice(i + 1);
-    try {
-      const key = decodeURIComponent(rawKey.replace(/\+/g, " "));
-      if (!(key in out)) out[key] = decodeURIComponent(rawValue.replace(/\+/g, " "));
-    } catch {}
-  }
-  return out;
-}
 
 function processSettings(query, storeGet, storeSet) {
   const action = query.action || "save";
@@ -215,7 +201,6 @@ function processSettings(query, storeGet, storeSet) {
 //            输出 $done({body, headers}) 或 $done({response:{status,headers,body}})。
 
 const Platform = {
-  name: "Surge",
   _unzipped: false, // 本次请求是否脚本侧解过 gzip
 
   // 存储: 只收字符串
@@ -276,6 +261,6 @@ const Platform = {
 // 两种场景都从 $request.url 取参数, 输出由 Platform.jsonDone 定型。
 
 const url = Platform.requestUrl();
-const query = parseQuery(url.split("?")[1] || "");
+const query = parseParams(url.split("?")[1] || "");
 const result = processSettings(query, Platform.storeGet, Platform.storeSet);
 Platform.done(Platform.jsonDone(result));
