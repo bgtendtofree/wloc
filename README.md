@@ -22,6 +22,8 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 
 或 Safari 打开 `surge:///install-module?url=https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc.sgmodule`
 
+安装后在模块列表确认「Apple WLOC 定位修改」已勾选; 跑一次快捷指令设位置, 日志搜 `PATCH ok` 即通。
+
 ### 证书 (两平台都要)
 
 HTTPS 重写必须 MITM 解密, 证书手动装:
