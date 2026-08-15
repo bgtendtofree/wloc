@@ -1,154 +1,12 @@
-/* src/wloc.js — Apple WLOC 定位修改 (Quantumult X)
- * 拦截 gs-loc(-cn).apple.com / gsp-ssl.ls.apple.com 的 /clls/wloc 响应,
- * 替换其中 protobuf 的经纬度/精度。QX 内核已自动解压 gzip, 脚本只处理纯数据。
- * 源码即发布物, 无构建步骤。
- */
+// core/wloc-patch.js — WLOC 响应 patch: 帧定位 + protobuf 替换 + 流程
+// 平台无关: 字节进 (number[]) 字节出 (number[]), 存储/参数经参数注入。
 
-// ==================== 运行环境 ====================
-// QX: JavaScriptCore, 提供 $request/$response/$prefs/$environment/$done;
-// Node 仅用于本地自检 (test/)。
-const ENV = typeof process !== "undefined" && process?.versions?.node ? "Node" : "QX";
-
-// ==================== 日志 ====================
-const Log = {
-  level: 3, // 0 off, 1 error, 2 warn, 3 info, 4 debug
-  groups: [],
-  set logLevel(v) {
-    const map = { off: 0, error: 1, warn: 2, warning: 2, info: 3, debug: 4, all: 5 };
-    this.level = typeof v === "number" ? v : (map[String(v).toLowerCase()] ?? 2);
-  },
-  print(...args) {
-    if (this.level === 0) return;
-    let lines = args.flatMap((a) => {
-      if (typeof a === "object") return [JSON.stringify(a)];
-      if (typeof a === "bigint" || typeof a === "number" || typeof a === "boolean") return [a.toString()];
-      return String(a).split(/\r?\n/);
-    });
-    for (const g of this.groups) {
-      lines = lines.map((l) => `  ${l}`);
-      lines.unshift(` ${g}:`);
-    }
-    console.log(["", ...lines].join("\n"));
-  },
-  info(...a) { if (this.level >= 3) this.print(...a.map((x) => ` ${x}`)); },
-  warn(...a) { if (this.level >= 2) this.print(...a.map((x) => ` ${x}`)); },
-  error(...a) { if (this.level >= 1) this.print(...a.map((x) => ` ${x}`)); },
-  debug(...a) { if (this.level >= 4) this.print(...a.map((x) => ` ${x}`)); },
-  group(name) { this.groups.unshift(name); },
-  groupEnd() { this.groups.shift(); },
-};
-
-// ==================== 持久化存储 ====================
-// 真机: $prefs; Node: box.dat (仅供测试)
-const Store = {
-  get(key, fallback = null) {
-    let v = ENV === "Node" ? readBox()[key] : $prefs.valueForKey(key);
-    try { v = JSON.parse(v); } catch {}
-    return v ?? fallback;
-  },
-  set(key, value) {
-    const s = typeof value === "object" ? JSON.stringify(value) : String(value);
-    if (ENV === "Node") {
-      const box = readBox();
-      box[key] = s;
-      writeBox(box);
-      return true;
-    }
-    return $prefs.setValueForKey(s, key);
-  },
-};
-
-function readBox() {
-  try {
-    return JSON.parse(require("fs").readFileSync("box.dat", "utf8"));
-  } catch {
-    return {};
-  }
-}
-function writeBox(box) {
-  require("fs").writeFileSync("box.dat", JSON.stringify(box));
-}
-
-// ==================== 结束 ====================
-function done(result = {}) {
-  Log.print(" 执行结束!");
-  if (ENV === "Node") process.exit(1);
-  if (typeof $done === "function") $done(result);
-}
-
-// ==================== protobuf 编解码 ====================
-function readVarint(data, offset) {
-  let result = 0;
-  let factor = 1;
-  let shift = 0;
-  while (offset < data.length) {
-    const b = 255 & data[offset++];
-    if (shift < 56) result += (127 & b) * factor;
-    if (!(128 & b)) return [result, offset];
-    factor *= 128;
-    shift += 7;
-    if (shift >= 70) throw new Error("varint too long at " + offset);
-  }
-  throw new Error("truncated varint");
-}
-
-function writeVarint(value) {
-  let v = BigInt.asUintN(64, BigInt(Math.floor(value)));
-  const out = [];
-  do {
-    const b = Number(v & 127n);
-    v >>= 7n;
-    out.push(b | (v ? 128 : 0));
-  } while (v);
-  return out;
-}
-
-function concat(parts) {
-  const out = [];
-  for (const p of parts) for (const b of p) out.push(255 & b);
-  return out;
-}
-
-function parseFields(data) {
-  const fields = [];
-  let offset = 0;
-  while (offset < data.length) {
-    const start = offset;
-    const [tag, next] = readVarint(data, offset);
-    offset = next;
-    const fieldNo = Math.floor(tag / 8);
-    const wireType = tag & 7;
-    if (fieldNo === 0) throw new Error("invalid protobuf field 0 at " + start);
-    let value;
-    if (wireType === 0) {
-      const [v, n] = readVarint(data, offset);
-      value = v;
-      offset = n;
-    } else if (wireType === 1) {
-      value = data.slice(offset, offset + 8);
-      offset += 8;
-    } else if (wireType === 2) {
-      const [len, n] = readVarint(data, offset);
-      offset = n;
-      value = data.slice(offset, offset + len);
-      offset += len;
-    } else if (wireType === 5) {
-      value = data.slice(offset, offset + 4);
-      offset += 4;
-    } else {
-      throw new Error("unsupported wire type " + wireType);
-    }
-    fields.push({ fieldNo, wireType, value, raw: data.slice(start, offset) });
-  }
-  return fields;
-}
-
-function encodeField(fieldNo, wireType, value) {
-  const head = writeVarint(fieldNo * 8 + wireType);
-  if (wireType === 0) return concat([head, writeVarint(value)]);
-  if (wireType === 1 || wireType === 5) return concat([head, value]);
-  if (wireType === 2) return concat([head, writeVarint(value.length), value]);
-  throw new Error("cannot encode wire type " + wireType);
+// ==================== 字节转换 ====================
+function toByteArray(body) {
+  if (!body) return [];
+  if (body instanceof ArrayBuffer) return Array.prototype.slice.call(new Uint8Array(body));
+  if (ArrayBuffer.isView?.(body)) return Array.prototype.slice.call(new Uint8Array(body.buffer, body.byteOffset, body.byteLength));
+  return [];
 }
 
 // ==================== WLOC patch ====================
@@ -299,22 +157,15 @@ function patchBody(body, target) {
   throw new Error("no patchable wloc payload found; " + [...errors, "raw:" + rawErrors.join(" | ")].join(" | "));
 }
 
-// ==================== 响应处理 ====================
-function toByteArray(body) {
-  if (!body) return [];
-  if (body instanceof ArrayBuffer) return Array.prototype.slice.call(new Uint8Array(body));
-  if (ArrayBuffer.isView?.(body)) return Array.prototype.slice.call(new Uint8Array(body.buffer, body.byteOffset, body.byteLength));
-  return [];
-}
-
-// QX 已把 gzip 解压成原始字节; 返回 null = 不改动, $done({}) 透传
-function handleResponse(request, response, settings) {
-  const url = request.url || "";
-  const seq = settings.seq ?? "-";
+// ==================== 响应流程 (平台无关) ====================
+// bytes: number[] (已解压)。返回 patched number[] 或 null (透传)。
+function handleWloc(bytes, settings, ctx) {
+  const seq = ctx.seq ?? "-";
+  const url = ctx.url || "";
+  const method = ctx.method || "?";
   Log.group(`[wloc] #${seq} Response ${url}`);
-  Log.info(`[wloc] #${seq} ${new Date().toISOString()} method=${request.method || "?"} url=${url}`);
+  Log.info(`[wloc] #${seq} ${new Date().toISOString()} method=${method} url=${url}`);
   try {
-    const bytes = toByteArray(response.bodyBytes);
     if (!bytes.length) {
       Log.warn(`[wloc] #${seq} 无二进制 body，跳过`);
       return null;
@@ -333,7 +184,7 @@ function handleResponse(request, response, settings) {
     Log.info(
       `[wloc] #${settings.seq} PATCH ok 目标: ${settings.longitude},${settings.latitude} accuracy ${stats.accOrig ?? "?"}→${settings.accuracy} locations=${stats.locations} wifi=${stats.wifi} cell=${stats.cell} skipped=${stats.skipped} bytes=${patched.length}`,
     );
-    return new Uint8Array(patched);
+    return patched;
   } catch (e) {
     Log.error(`[wloc] #${seq} PATCH fail: ${e.message || e}`);
     return null;
@@ -342,39 +193,13 @@ function handleResponse(request, response, settings) {
   }
 }
 
-// ==================== 配置 ====================
-// 优先级: 快捷指令/接口储存 ($prefs) > 重写行脚本 URL # 参数 > 默认值
-// 参数写在重写行脚本 URL 的 # 之后 (不发送到服务器): wloc.js#accuracy=30&logLevel=debug
+// ==================== 配置 (平台无关) ====================
+// 优先级: 快捷指令/接口储存 > 模块参数 > 默认值
 const DEFAULTS = { longitude: null, latitude: null, accuracy: 25, logLevel: "info" };
 
-function parseArgs(input) {
-  const out = {};
-  if (typeof input !== "string") return out;
-  for (const pair of input.replace(/^\?/, "").split("&")) {
-    if (!pair) continue;
-    const i = pair.indexOf("=");
-    const rawKey = i < 0 ? pair : pair.slice(0, i);
-    const rawValue = i < 0 ? "" : pair.slice(i + 1);
-    try {
-      out[decodeURIComponent(rawKey)] = decodeURIComponent(rawValue.replace(/\+/g, " "));
-    } catch {}
-  }
-  return out;
-}
-
-function argumentString() {
-  try {
-    const sp = globalThis.$environment?.sourcePath || "";
-    const i = sp.indexOf("#");
-    return i >= 0 ? sp.slice(i + 1) : "";
-  } catch {
-    return "";
-  }
-}
-
-function loadSettings() {
-  const args = parseArgs(argumentString());
-  const saved = Store.get("wloc_settings");
+function loadSettings(storeGet, storeSet, argument) {
+  const args = parseArgs(argument);
+  const saved = storeGetParsed(storeGet, "wloc_settings");
   const s = { ...DEFAULTS };
   const inRange = (v, min, max) => {
     const n = parseFloat(v);
@@ -406,25 +231,9 @@ function loadSettings() {
   return s;
 }
 
-// ==================== 入口 ====================
-let out = null;
-try {
-  const response = typeof $response !== "undefined" ? $response : undefined;
-  if (!response) {
-    Log.warn("[wloc] 非响应模式，跳过");
-  } else {
-    const settings = loadSettings();
-    settings.seq = Store.get("wloc_seq", 0) + 1; // 跨请求持久化序号, 用于对齐日志与定位回跳时刻
-    Store.set("wloc_seq", settings.seq);
-    Log.logLevel = settings.logLevel;
-    out = handleResponse($request, response, settings);
-  }
-} catch (e) {
-  Log.error(e);
-}
-if (out) {
-  // QX 官方示例: bodyBytes 用 buffer.slice 裁掉可能的偏移
-  done({ bodyBytes: out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength) });
-} else {
-  done({});
+// 跨请求持久化序号, 用于对齐日志与定位回跳时刻
+function nextSeq(storeGet, storeSet) {
+  const n = (storeGetParsed(storeGet, "wloc_seq", 0) || 0) + 1;
+  storeSetString(storeSet, "wloc_seq", n);
+  return n;
 }

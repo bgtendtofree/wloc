@@ -6,8 +6,8 @@
 hostname = gs-loc.apple.com, gs-loc-cn.apple.com, gsp-ssl.ls.apple.com
 
 ; 快捷指令设位置: 拦截 /wloc-settings/save 的响应, 返回合成 JSON (Apple 原始响应为 404)
-^https?:\/\/gs-loc(-cn)?\.apple\.com\/wloc-settings\/save url script-response-body https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/src/wloc-settings.js
+^https?:\/\/gs-loc(-cn)?\.apple\.com\/wloc-settings\/save url script-response-body https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/dist/qx/wloc-settings.js
 
 ; WLOC 定位响应: 解析 protobuf 替换经纬度/精度 (QX 内核自动解压 gzip)
 ; 可选参数追加在脚本 URL # 后: wloc.js#accuracy=30&logLevel=debug
-^https?:\/\/(?:gs-loc(?:-cn)?\.apple\.com|gsp-ssl\.ls\.apple\.com)\/clls\/wloc url script-response-body https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/src/wloc.js
+^https?:\/\/(?:gs-loc(?:-cn)?\.apple\.com|gsp-ssl\.ls\.apple\.com)\/clls\/wloc url script-response-body https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/dist/qx/wloc.js

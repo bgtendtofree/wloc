@@ -1,8 +1,10 @@
-# Apple WLOC 定位修改 (Quantumult X)
+# Apple WLOC 定位修改 (Quantumult X / Surge)
 
 修改 Apple 网络定位 (Wi-Fi/基站) 返回坐标, 实现 iOS 虚拟定位。**苹果地图选点 + 快捷指令, 全程设备内完成, 无需任何服务器。**
 
 ## 安装
+
+### Quantumult X
 
 QX 首页风车 → 重写 → 引用 → + → 粘贴:
 
@@ -10,15 +12,26 @@ QX 首页风车 → 重写 → 引用 → + → 粘贴:
 https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc.qxrewrite
 ```
 
-再配证书 (HTTPS 重写必须 MITM 解密, 证书手动装):
+### Surge
 
-1. QX 设置 → MitM → **生成证书**
-2. **配置证书** → 跳转 Safari 下载描述文件 → 允许安装
-3. 系统设置 → 已下载描述文件 → 输入锁屏密码安装
-4. 系统设置 → 通用 → 关于本机 → **证书信任设置** → 勾选 Quantumult X CA
-5. 回 QX → MitM 开关打开
+模块 → 安装新模块 → 粘贴:
 
-`hostname` 行已自动配置 MITM 主机名; 拦截域名: 国区 `gs-loc(-cn).apple.com` 与国际区 `gsp-ssl.ls.apple.com`。装完证书看日志出现 `PATCH ok` 即通。
+```
+https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc.sgmodule
+```
+
+或 Safari 打开 `surge:///install-module?url=https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc.sgmodule`
+
+### 证书 (两平台都要)
+
+HTTPS 重写必须 MITM 解密, 证书手动装:
+
+1. QX: 设置 → MitM → **生成证书** → **配置证书** ｜ Surge: 更多 → 证书 → **生成新的 CA 证书** → **安装证书**
+2. 系统设置 → 已下载描述文件 → 输入锁屏密码安装
+3. 系统设置 → 通用 → 关于本机 → **证书信任设置** → 勾选对应 CA
+4. 回客户端 → 打开 MITM 开关
+
+QX 的 `hostname` 行自动并入 MITM 主机名; Surge 模块 `[MITM] hostname = %APPEND% …` 同效。拦截域名: 国区 `gs-loc(-cn).apple.com` 与国际区 `gsp-ssl.ls.apple.com`。
 
 ## 快捷指令: 设位置
 
@@ -52,22 +65,22 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 获取 URL 内容: https://gs-loc.apple.com/wloc-settings/save?action=clear
 ```
 
-清除已存坐标 → 脚本自动进入透传模式 → 真实定位恢复。也可直接停用重写资源。
+清除已存坐标 → 脚本自动进入透传模式 → 真实定位恢复。也可直接停用重写/模块。
 
 **切换后刷新 (实测有效):** 关开一次定位服务即可; 无效则杀掉 App 重开; 仍无效再重启设备。
 
 ## 工作原理
 
 ```
-快捷指令 → gs-loc.apple.com/wloc-settings/save (响应被重写拦截)
-        → wloc-settings.js 解析 $request.url 写入 $prefs, 覆盖响应为 200+JSON
-        → 下次 WLOC 定位 → wloc.js 拦截 /clls/wloc 响应 → patch protobuf 坐标
+快捷指令 → gs-loc.apple.com/wloc-settings/save (被拦截)
+        → wloc-settings 脚本写持久化存储 (GCJ-02→WGS84 设备端换算)
+        → 下次 WLOC 定位 → wloc 脚本拦 /clls/wloc 响应 → patch protobuf 坐标
 ```
 
-两条规则 (均为 `script-response-body`):
+两平台差异仅拦截点:
 
-- `wloc.js` — 拦截 `/clls/wloc` 响应 (国区 gs-loc(-cn).apple.com + 国际区 gsp-ssl.ls.apple.com), 解析 protobuf 替换经纬度/精度。QX 内核自动解压 gzip, 脚本直接拿 `$response.bodyBytes` 纯数据
-- `wloc-settings.js` — 拦截 `/wloc-settings/save` 响应, 写 `$prefs` (含设备端 GCJ-02→WGS84)。QX 请求阶段脚本无法伪造响应, 故请求正常出网 (Apple 返回 404), 脚本覆盖响应体返回 JSON
+- **Surge**: settings 在 `http-request` 阶段合成响应, **请求不出设备**; wloc 用 `binary-body-mode` 拿原始字节, gzip 由脚本 `$utils.ungzip` 解压
+- **QX**: 请求阶段脚本无法伪造响应, settings 在响应阶段覆盖 Apple 的 404; gzip 由 QX 内核自动解压, 脚本直接拿 `$response.bodyBytes`
 
 ## 边界 (实测)
 
@@ -79,7 +92,8 @@ https://raw.githubusercontent.com/bgtendtofree/wloc/refs/heads/main/modules/wloc
 
 ## 诊断日志
 
-QX 风车 → 日志 → **长按日志栏目** → 二级菜单「日志文件」→ 日志级别设 **Debug** (默认 Info, 脚本 console.log 不输出), 日志里搜 `[wloc]`:
+- QX: 风车 → 日志 → **长按日志栏目** → 二级菜单「日志文件」→ 日志级别设 Debug, 搜 `[wloc]`
+- Surge: 更多 → 日志 → 开启详细日志; `debug=true` 时脚本 `console.log` 还显示在请求备注 (notes) 里
 
 ```
 [wloc] #37 2026-08-06T08:19:08Z method=POST url=https://gs-loc-cn.apple.com/clls/wloc
@@ -101,18 +115,27 @@ QX 风车 → 日志 → **长按日志栏目** → 二级菜单「日志文件�
 | cs | `gcj` = 输入为 GCJ-02, 设备端转 WGS84 再存 | 不转换 |
 | action | `clear` 清除 / `query` 查询 | save |
 
-模块级自定义参数 (可选): 编辑重写行, 在 wloc.js 脚本 URL 末尾加 `#accuracy=30&logLevel=debug` (`#` 后内容不发送到服务器)。已储存坐标优先。
+模块级自定义参数 (可选): QX 编辑重写行在脚本 URL 尾加 `#accuracy=30&logLevel=debug`; Surge 改 `[Script]` 行 `argument=` 即可。已储存坐标优先。
+
+## 代码结构 (核心模块化 + 组装)
+
+```
+core/       平台无关纯逻辑 (protobuf 编解码、WLOC patch、GCJ、参数校验、日志)
+platform/   每平台 ~40 行胶水 (QX: $prefs/bodyBytes/#参数 | Surge: $persistentStore/ungzip/argument)
+entry/      每功能薄入口 (双平台共用, 差异全在 Platform 对象)
+build.mjs   ~60 行纯拼接脚本, 无依赖无转译
+dist/       构建产物 = 发布物, 已提交 (raw URL 指向这里)
+```
+
+- 加平台 (Loon/Stash): 一个 `platform/xxx.js` + manifest 两行, 核心零改动
+- 手改 `dist/` 会被下次 build 覆盖; CI 有 `node build.mjs --check` 防漂移
 
 ## 本地自检
 
 ```
-node test/node-demo.mjs      # wloc.js patch + 诊断日志 (wifi/args/cell/透传/负坐标)
-node test/settings-demo.mjs  # GCJ 换算 + 范围/acc 校验 + 零坐标
+node build.mjs           # 重新组装 dist
+node test/demo.mjs       # vm 内双平台假全局全量自检 (wifi/cell/gzip/透传/负坐标/参数/gcj)
 ```
-
-## 代码形态
-
-`src/` 两个脚本就是**可读源码**, 源码即发布物, 无构建步骤 — 直接改直接 push, QX 重写资源更新即生效。
 
 ## 致谢
 

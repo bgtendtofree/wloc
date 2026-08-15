@@ -5,5 +5,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: node test/node-demo.mjs
-      - run: node test/settings-demo.mjs
+      - run: node build.mjs --check
+      - run: node test/demo.mjs
